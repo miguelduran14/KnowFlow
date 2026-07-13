@@ -25,6 +25,16 @@ onboarding legible. Contexto completo, arquitectura y decisiones abiertas en `CO
 - Ante una decisión de diseño abierta (ver `CONTEXT.md`), pregunta — no la cierres por tu cuenta.
 - Actualiza tests en los puntos de decisión antes de dar algo por cerrado.
 
----
-> El bloque de *issue tracker* lo añadirá `setup-matt-pocock-skills` al ejecutarlo. Déjale sitio aquí
-> abajo; si lo escribe también en `CLAUDE.md`, consolida ese bloque en este fichero.
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues. Use `gh` CLI for all operations. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role triage vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo: `CONTEXT.md` at root + `docs/adr/` for architectural decisions. See `docs/agents/domain.md`.
