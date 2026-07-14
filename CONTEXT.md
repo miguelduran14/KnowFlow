@@ -26,7 +26,7 @@ si probar la herramienta cuesta cero fricción.
 1. **Precisión de dialecto z/OS**: los LLM genéricos alucinan en mainframe (p. ej. `SYSCAT.COLUMNS`
    vs `SYSIBM.SYSCOLUMNS` en DB2 z/OS). Codifico ese conocimiento real.
 2. **Alfabetización de datos**: interpretar bien OCCURS, REDEFINES, niveles 88, COMP-3; renderizar
-   copybooks como esquema legible **y muy visual** (ver "mapa de bytes" abajo).
+   copybooks como esquema legible (tabla Markdown en MVP; ver "mapa de bytes" en slice 2).
 3. **Arquitectura correcta** (ver abajo).
 
 ## Principio de arquitectura
@@ -54,10 +54,11 @@ arrastrar ficheros o pegar código/fragmentos.
 
 ## Roadmap de slices
 1. **Slice 1 (MVP)**: resolución de COPY/REPLACING + `EXEC SQL INCLUDE` + data division →
-   esquema legible y visual. Inventario de bloques EXEC (tablas tocadas, cursores, comandos CICS)
-   sin interpretación semántica. Modo degradado con no-invención.
+   esquema legible como tabla Markdown exportable. Inventario de bloques EXEC (tablas tocadas,
+   cursores, comandos CICS) sin interpretación semántica. Modo degradado con no-invención.
 2. **Slice 2**: JCL — explicar y encadenar job → steps → programas → datasets (mapa del job en
-   Mermaid). Barato de parsear; gana valor sobre el explicador de programa.
+   Mermaid). Barato de parsear; gana valor sobre el explicador de programa. Junto con esto, el
+   **mapa de bytes visual** (ver "Superficie" abajo).
 3. **Después**: interpretación semántica profunda de SQL/CICS, capturas de pantalla (nivel 3 de
    fidelidad), grafo PERFORM completo.
 
@@ -66,10 +67,10 @@ arrastrar ficheros o pegar código/fragmentos.
 sencillo pero profesional y pulido. **El motor es una librería; la GUI es una piel** — durante el
 desarrollo el core se ejercita con un arnés CLI no-producto (cero horas de UX). Ver ADR-0002.
 
-La representación estrella del esquema: **mapa de bytes** — el registro como barra horizontal,
-campos proporcionales a su tamaño real, REDEFINES como capas superpuestas sobre la misma memoria,
-OCCURS como bloques repetidos, COMP-3 con su tamaño empaquetado. (Dirección acordada; diseño
-concreto pendiente de ratificar al verlo.)
+**Slice 2 — mapa de bytes:** la representación visual estrella del esquema — el registro como barra
+horizontal, campos proporcionales a su tamaño real, REDEFINES como capas superpuestas sobre la
+misma memoria, OCCURS como bloques repetidos, COMP-3 con su tamaño empaquetado. Fuera del MVP;
+dirección acordada, diseño concreto pendiente de ratificar con un prototipo visual.
 
 ## Stack
 **TypeScript/Node de punta a punta. Parser propio del subconjunto.** Sin JVM, sin ProLeap/Koopa
@@ -105,7 +106,7 @@ de negocio, los **módulos nuevos** pueden nacer open-core — lo publicado no s
 futuro no está regalado. La marca/nombre se conserva. Ver ADR-0004.
 
 ## Decisiones que QUEDAN abiertas
-- Diseño concreto del mapa de bytes (dirección acordada; ratificar con prototipo visual).
+- Diseño concreto del mapa de bytes de slice 2 (dirección acordada; ratificar con prototipo visual).
 - Cuándo entra la interpretación semántica profunda de EXEC SQL/CICS (post-slice 2).
 - Capturas de pantalla como entrada (nivel 3 de fidelidad): alcance y momento.
 - Open-core: solo si aparece señal de negocio real; no diseñar para ello todavía.

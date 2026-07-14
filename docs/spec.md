@@ -39,21 +39,25 @@ explicación encima de hechos verificados. Nunca adivina estructura.
 1. Como dev junior que hereda un programa COBOL, quiero arrastrar el fichero del programa y sus copybooks a una interfaz local, para obtener un paquete de onboarding sin instalar nada pesado.
 2. Como dev junior, quiero pegar código COBOL directamente (programa entero o fragmento), para entender lo que tengo delante aunque no tenga los ficheros a mano.
 3. Como dev junior, quiero ver la data division como un esquema legible (campo, tipo, longitud, offset, ejemplo), para entender el registro sin descifrar PIC a mano.
-4. Como dev junior, quiero un esquema MUY visual — mapa de bytes con campos proporcionales a su tamaño real, REDEFINES como capas superpuestas sobre la misma memoria, OCCURS como bloques repetidos, COMP-3 con su tamaño empaquetado —, para entender de un vistazo lo que tres párrafos no explican.
-5. Como dev junior, quiero que los COPY (y `EXEC SQL INCLUDE`) se resuelvan automáticamente si aporto los members, para ver el registro completo y no una referencia opaca.
-6. Como dev junior sin todos los copybooks a mano, quiero que la herramienta me dé lo que pueda y marque explícitamente cada hueco ("copybook no disponible, estructura desconocida"), para tener información honesta en vez de inventada.
-7. Como dev junior, quiero que la propia salida me diga qué copybooks faltan para completar el esquema, para saber exactamente qué bajarme del PDS.
-8. Como dev junior, quiero saber qué tablas DB2 toca el programa, cuántos cursores tiene y qué comandos CICS usa (inventario de bloques EXEC), para responder a la primera pregunta del onboarding: "¿este programa qué toca?".
-9. Como dev junior, quiero un resumen del programa en lenguaje llano generado por IA sobre los hechos del parser, para orientarme antes de leer el código.
-10. Como dev junior, quiero que cada resultado lleve una etiqueta de nivel de fidelidad (verificado por parser / parcialmente verificado / solo LLM), para saber cuánto confiar en cada afirmación.
-11. Como dev junior, quiero pegar un trozo suelto de código y recibir una explicación honesta (etiquetada como parcialmente verificada), para resolver dudas puntuales sin montar el flujo entero.
-12. Como dev junior, quiero exportar el esquema como tabla Markdown, para pegarlo en la wiki o en un traspaso.
-13. Como usuario en banca/seguros, quiero que mi código no pase por ningún servidor del autor de la herramienta, para no violar las políticas de IP de mi empresa.
-14. Como usuario, quiero configurar mi propia clave de API y elegir proveedor (Anthropic, OpenAI u otro) y modelo, para usar el que mi empresa tenga aprobado y controlar el coste.
-15. Como dev junior, quiero lanzar la herramienta con un solo comando (`npx knowflow`), para probarla con fricción cero.
-16. Como mantenedor del proyecto, quiero fixtures golden-file (COBOL de entrada → esquema esperado) que pueda juzgar sabiendo COBOL, para verificar el parser sin saber leer TypeScript.
-17. Como mantenedor del proyecto, quiero que cualquier salida del LLM que afirme estructura no presente en los hechos del parser cuente como bug, para proteger la promesa de no-invención.
-18. *(Slice 2)* Como dev junior, quiero ver un mapa del job JCL (job → steps → programas → datasets) explicado en lenguaje llano, para entender la cadena completa y no solo un programa.
+4. Como dev junior, quiero que los COPY (y `EXEC SQL INCLUDE`) se resuelvan automáticamente si aporto los members, para ver el registro completo y no una referencia opaca.
+5. Como dev junior sin todos los copybooks a mano, quiero que la herramienta me dé lo que pueda y marque explícitamente cada hueco ("copybook no disponible, estructura desconocida"), para tener información honesta en vez de inventada.
+6. Como dev junior, quiero que la propia salida me diga qué copybooks faltan para completar el esquema, para saber exactamente qué bajarme del PDS.
+7. Como dev junior, quiero saber qué tablas DB2 toca el programa, cuántos cursores tiene y qué comandos CICS usa (inventario de bloques EXEC), para responder a la primera pregunta del onboarding: "¿este programa qué toca?".
+8. Como dev junior, quiero un resumen del programa en lenguaje llano generado por IA sobre los hechos del parser, para orientarme antes de leer el código.
+9. Como dev junior, quiero que cada resultado lleve una etiqueta de nivel de fidelidad (verificado por parser / parcialmente verificado / solo LLM), para saber cuánto confiar en cada afirmación.
+10. Como dev junior, quiero pegar un trozo suelto de código y recibir una explicación honesta (etiquetada como parcialmente verificada), para resolver dudas puntuales sin montar el flujo entero.
+11. Como dev junior, quiero exportar el esquema como tabla Markdown, para pegarlo en la wiki o en un traspaso.
+12. Como usuario en banca/seguros, quiero que mi código no pase por ningún servidor del autor de la herramienta, para no violar las políticas de IP de mi empresa.
+13. Como usuario, quiero configurar mi propia clave de API y elegir proveedor (Anthropic, OpenAI u otro) y modelo, para usar el que mi empresa tenga aprobado y controlar el coste.
+14. Como dev junior, quiero lanzar la herramienta con un solo comando (`npx knowflow`), para probarla con fricción cero.
+15. Como mantenedor del proyecto, quiero fixtures golden-file (COBOL de entrada → esquema esperado) que pueda juzgar sabiendo COBOL, para verificar el parser sin saber leer TypeScript.
+16. Como mantenedor del proyecto, quiero que cualquier salida del LLM que afirme estructura no presente en los hechos del parser cuente como bug, para proteger la promesa de no-invención.
+17. *(Slice 2)* Como dev junior, quiero ver un mapa del job JCL (job → steps → programas → datasets) explicado en lenguaje llano, para entender la cadena completa y no solo un programa.
+
+### Slice 2 / Roadmap
+
+- Como dev junior, quiero un esquema MUY visual — mapa de bytes con campos proporcionales a su tamaño real, REDEFINES como capas superpuestas sobre la misma memoria, OCCURS como bloques repetidos, COMP-3 con su tamaño empaquetado —, para entender de un vistazo lo que tres párrafos no explican. *(Movida del MVP a slice 2.)*
+- **Nota (ex-criterio de éxito 8): PENDIENTE** — el diseño concreto del mapa de bytes se ratifica con un prototipo visual delante; la dirección (barra proporcional, capas, bloques) está acordada.
 
 ## Implementation Decisions
 
@@ -111,7 +115,7 @@ Tomadas en el grilling y registradas como ADRs; aquí la vista consolidada:
 ## Dentro del MVP (slice 1)
 
 - Resolución de COPY/REPLACING y `EXEC SQL INCLUDE` (con modo degradado marcando huecos).
-- Data division → esquema legible y muy visual (mapa de bytes) + tabla Markdown exportable.
+- Data division → esquema legible como tabla Markdown exportable.
 - Inventario de bloques EXEC SQL/CICS (qué toca el programa), sin interpretación semántica.
 - Entrada por fichero (arrastrar) y por código pegado (programa o fragmento).
 - Etiquetas de nivel de fidelidad en toda salida.
@@ -125,6 +129,7 @@ Tomadas en el grilling y registradas como ADRs; aquí la vista consolidada:
 - **Análisis de estate completo** (no compite con IBM ADDI).
 - **JCL** (explicar y encadenar job → programas → datasets) — fuera del MVP; es el **slice 2**
   explícito del roadmap.
+- **Mapa de bytes visual** (proporcional, REDEFINES como capas, OCCURS como bloques) — slice 2.
 - **Interpretación semántica profunda de EXEC SQL/CICS** (cursores, flujo CICS,
   pseudo-conversacional) — slice posterior.
 - **Capturas de pantalla como entrada** (nivel 3 de fidelidad) — feature posterior.
@@ -153,8 +158,6 @@ El slice 1 se considera cerrado cuando:
    presentes en la salida.
 7. **La restricción de IP se mantiene intacta:** cero código corporativo en el repo, en los
    fixtures y en cualquier sesión de agente.
-8. **PENDIENTE de definir al construir la GUI:** el criterio visual del mapa de bytes — la
-   dirección está acordada, pero el diseño concreto se ratifica con un prototipo visual delante.
 
 ## Further Notes / PENDIENTE
 
