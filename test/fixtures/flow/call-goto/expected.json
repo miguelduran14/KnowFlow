@@ -1,0 +1,67 @@
+{
+  "programId": "CALLDEMO",
+  "paragraphs": [
+    {
+      "name": "MAIN-PARA",
+      "kind": "paragraph"
+    },
+    {
+      "name": "CHOICE-A",
+      "kind": "paragraph"
+    },
+    {
+      "name": "CHOICE-B",
+      "kind": "paragraph"
+    },
+    {
+      "name": "FINISH-PARA",
+      "kind": "paragraph",
+      "terminates": true
+    }
+  ],
+  "edges": [
+    {
+      "from": "MAIN-PARA",
+      "to": "SUBPROG1",
+      "kind": "call",
+      "line": 11
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "WS-ROUTINE",
+      "kind": "call",
+      "dynamic": true,
+      "line": 12
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "CHOICE-A",
+      "kind": "goto",
+      "condition": "DEPENDING ON WS-OPTION",
+      "line": 13
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "CHOICE-B",
+      "kind": "goto",
+      "condition": "DEPENDING ON WS-OPTION",
+      "line": 13
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "FINISH-PARA",
+      "kind": "goto",
+      "line": 14
+    },
+    {
+      "from": "CHOICE-A",
+      "to": "GHOST-PARA",
+      "kind": "goto",
+      "line": 17
+    }
+  ],
+  "missingTargets": [
+    "GHOST-PARA"
+  ],
+  "fragment": false
+}

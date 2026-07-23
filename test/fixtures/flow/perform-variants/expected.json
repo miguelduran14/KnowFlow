@@ -1,0 +1,51 @@
+{
+  "programId": "VARDEMO",
+  "paragraphs": [
+    {
+      "name": "MAIN-PARA",
+      "kind": "paragraph",
+      "terminates": true
+    },
+    {
+      "name": "SETUP-PARA",
+      "kind": "paragraph"
+    },
+    {
+      "name": "SETUP-EXIT",
+      "kind": "paragraph"
+    },
+    {
+      "name": "COUNT-PARA",
+      "kind": "paragraph"
+    },
+    {
+      "name": "READ-PARA",
+      "kind": "paragraph"
+    }
+  ],
+  "edges": [
+    {
+      "from": "MAIN-PARA",
+      "to": "SETUP-PARA",
+      "kind": "perform",
+      "thru": "SETUP-EXIT",
+      "line": 6
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "COUNT-PARA",
+      "kind": "perform",
+      "times": 3,
+      "line": 7
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "READ-PARA",
+      "kind": "perform",
+      "condition": "UNTIL WS-EOF = 'Y'",
+      "line": 8
+    }
+  ],
+  "missingTargets": [],
+  "fragment": false
+}

@@ -69,3 +69,56 @@ export interface ParseResult {
   /** Members de COPY/EXEC SQL INCLUDE no resueltos — lo que falta para completar el esquema */
   missingCopybooks: string[]
 }
+
+// ── Flujo (PROCEDURE DIVISION) ──────────────────────────────────────────
+
+/** Un párrafo o sección de la PROCEDURE DIVISION, en orden de fuente */
+export interface FlowParagraph {
+  name: string
+  kind: 'paragraph' | 'section'
+  /** Sección a la que pertenece el párrafo, si el programa usa secciones */
+  section?: string | undefined
+  /** Contiene STOP RUN, GOBACK o EXIT PROGRAM */
+  terminates?: boolean | undefined
+  /**
+   * Nodo de entrada sintético: agrupa las sentencias que aparecen antes
+   * del primer párrafo declarado. No existe como párrafo en el fuente.
+   */
+  implicit?: boolean | undefined
+}
+
+export type FlowEdgeKind = 'perform' | 'call' | 'goto'
+
+/** Una arista de flujo extraída de una sentencia concreta del fuente */
+export interface FlowEdge {
+  /** Párrafo (o nodo implícito) donde aparece la sentencia */
+  from: string
+  /** Destino: párrafo/sección (perform, goto) o programa (call) */
+  to: string
+  kind: FlowEdgeKind
+  /** PERFORM A THRU B */
+  thru?: string | undefined
+  /** PERFORM A n TIMES */
+  times?: number | undefined
+  /** Texto crudo de la condición: "UNTIL ..." o "DEPENDING ON ..." */
+  condition?: string | undefined
+  /** CALL con variable: el programa destino no es verificable en el fuente */
+  dynamic?: boolean | undefined
+  /** Línea del fuente (1-based) donde aparece la sentencia — trazabilidad */
+  line: number
+}
+
+/** Hechos de flujo extraídos de la PROCEDURE DIVISION */
+export interface FlowResult {
+  /** PROGRAM-ID si aparece en el fuente */
+  programId?: string | undefined
+  paragraphs: FlowParagraph[]
+  edges: FlowEdge[]
+  /** Destinos de PERFORM/GO TO que no corresponden a ningún párrafo del fuente */
+  missingTargets: string[]
+  /**
+   * true si el fuente no traía cabecera PROCEDURE DIVISION y se parseó
+   * como fragmento — nivel de fidelidad "parcialmente verificado"
+   */
+  fragment: boolean
+}

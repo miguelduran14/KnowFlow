@@ -1,0 +1,39 @@
+{
+  "programId": "SECTDEMO",
+  "paragraphs": [
+    {
+      "name": "CONTROL-SECTION",
+      "kind": "section"
+    },
+    {
+      "name": "MAIN-PARA",
+      "kind": "paragraph",
+      "section": "CONTROL-SECTION",
+      "terminates": true
+    },
+    {
+      "name": "IO-SECTION",
+      "kind": "section"
+    },
+    {
+      "name": "READ-PARA",
+      "kind": "paragraph",
+      "section": "IO-SECTION"
+    },
+    {
+      "name": "WRITE-PARA",
+      "kind": "paragraph",
+      "section": "IO-SECTION"
+    }
+  ],
+  "edges": [
+    {
+      "from": "MAIN-PARA",
+      "to": "IO-SECTION",
+      "kind": "perform",
+      "line": 8
+    }
+  ],
+  "missingTargets": [],
+  "fragment": false
+}

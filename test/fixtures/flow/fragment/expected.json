@@ -1,0 +1,33 @@
+{
+  "paragraphs": [
+    {
+      "name": "MAIN",
+      "kind": "paragraph",
+      "implicit": true
+    },
+    {
+      "name": "VALIDATE-PARA",
+      "kind": "paragraph"
+    },
+    {
+      "name": "APPLY-PARA",
+      "kind": "paragraph"
+    }
+  ],
+  "edges": [
+    {
+      "from": "MAIN",
+      "to": "VALIDATE-PARA",
+      "kind": "perform",
+      "line": 3
+    },
+    {
+      "from": "MAIN",
+      "to": "APPLY-PARA",
+      "kind": "perform",
+      "line": 5
+    }
+  ],
+  "missingTargets": [],
+  "fragment": true
+}

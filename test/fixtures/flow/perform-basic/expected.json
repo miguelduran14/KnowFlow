@@ -1,0 +1,54 @@
+{
+  "programId": "FLOWDEMO",
+  "paragraphs": [
+    {
+      "name": "MAIN-PARA",
+      "kind": "paragraph",
+      "terminates": true
+    },
+    {
+      "name": "INIT-PARA",
+      "kind": "paragraph"
+    },
+    {
+      "name": "PROCESS-PARA",
+      "kind": "paragraph"
+    },
+    {
+      "name": "DETAIL-PARA",
+      "kind": "paragraph"
+    },
+    {
+      "name": "WRAP-UP-PARA",
+      "kind": "paragraph"
+    }
+  ],
+  "edges": [
+    {
+      "from": "MAIN-PARA",
+      "to": "INIT-PARA",
+      "kind": "perform",
+      "line": 9
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "PROCESS-PARA",
+      "kind": "perform",
+      "line": 10
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "WRAP-UP-PARA",
+      "kind": "perform",
+      "line": 11
+    },
+    {
+      "from": "PROCESS-PARA",
+      "to": "DETAIL-PARA",
+      "kind": "perform",
+      "line": 16
+    }
+  ],
+  "missingTargets": [],
+  "fragment": false
+}

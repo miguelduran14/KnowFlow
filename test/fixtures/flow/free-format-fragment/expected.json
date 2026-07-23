@@ -1,0 +1,23 @@
+{
+  "paragraphs": [
+    {
+      "name": "MAIN-LOGIC",
+      "kind": "paragraph",
+      "terminates": true
+    },
+    {
+      "name": "CHECK-PARA",
+      "kind": "paragraph"
+    }
+  ],
+  "edges": [
+    {
+      "from": "MAIN-LOGIC",
+      "to": "CHECK-PARA",
+      "kind": "perform",
+      "line": 3
+    }
+  ],
+  "missingTargets": [],
+  "fragment": true
+}

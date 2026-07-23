@@ -1,0 +1,29 @@
+{
+  "programId": "LITDEMO",
+  "paragraphs": [
+    {
+      "name": "MAIN-PARA",
+      "kind": "paragraph"
+    },
+    {
+      "name": "REAL-PARA",
+      "kind": "paragraph"
+    }
+  ],
+  "edges": [
+    {
+      "from": "MAIN-PARA",
+      "to": "REALPROG",
+      "kind": "call",
+      "line": 10
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "REAL-PARA",
+      "kind": "perform",
+      "line": 11
+    }
+  ],
+  "missingTargets": [],
+  "fragment": false
+}

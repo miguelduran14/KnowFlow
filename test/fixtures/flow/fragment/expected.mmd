@@ -1,0 +1,7 @@
+flowchart TD
+  NOTA_FRAGMENTO["⚠ Fragmento sin PROCEDURE DIVISION — parcialmente verificado"]
+  MAIN(["MAIN (entrada implícita)"])
+  VALIDATE_PARA["VALIDATE-PARA"]
+  APPLY_PARA["APPLY-PARA"]
+  MAIN -->|"PERFORM"| VALIDATE_PARA
+  MAIN -->|"PERFORM"| APPLY_PARA
