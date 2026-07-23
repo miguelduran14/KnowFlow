@@ -1,0 +1,243 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #16161e;
+  --bg-panel: #1a1b26;
+  --bg-raised: #1f2335;
+  --border: #2a2f45;
+  --text: #c0caf5;
+  --text-dim: #565f89;
+  --accent: #7aa2f7;
+  --warn: #e0af68;
+  --missing: #f7768e;
+  --ok: #9ece6a;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.brand__name {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+}
+
+.brand__tag {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions button {
+  background: var(--bg-raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.notices {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 18px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.notice {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.notice--warn {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.notice--missing {
+  color: var(--missing);
+  border-color: var(--missing);
+}
+
+.content {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 2fr;
+  flex: 1;
+  min-height: 0;
+}
+
+.editor {
+  border-right: 1px solid var(--border);
+  display: flex;
+}
+
+.editor textarea {
+  flex: 1;
+  resize: none;
+  border: none;
+  outline: none;
+  background: var(--bg-panel);
+  color: var(--text);
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 14px;
+}
+
+.editor textarea::placeholder {
+  color: var(--text-dim);
+}
+
+.canvas {
+  position: relative;
+  min-width: 0;
+}
+
+.empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--text-dim);
+}
+
+.empty p {
+  margin: 0;
+  font-size: 15px;
+}
+
+.empty__hint {
+  font-size: 12px !important;
+}
+
+/* ── Nodos ─────────────────────────────────────────────── */
+
+.node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--bg-raised);
+  border: 1.5px solid var(--accent);
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+}
+
+.node__label {
+  white-space: nowrap;
+}
+
+.node__badge {
+  font-size: 10px;
+  color: var(--bg);
+  background: var(--accent);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.node__section {
+  position: absolute;
+  top: -9px;
+  right: 8px;
+  font-size: 9px;
+  color: var(--text-dim);
+  background: var(--bg-panel);
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.node--section {
+  border-style: double;
+  border-width: 4px;
+}
+
+.node--implicit {
+  border-radius: 999px;
+  border-style: dashed;
+  color: var(--text-dim);
+}
+
+.node--call {
+  border-color: var(--ok);
+  border-left-width: 5px;
+  border-right-width: 5px;
+}
+
+.node--missing {
+  border-color: var(--missing);
+  border-style: dashed;
+  color: var(--missing);
+}
+
+.handle {
+  opacity: 0;
+}
+
+.minimap {
+  background: var(--bg-panel);
+}
+
+.react-flow__attribution {
+  background: transparent;
+  color: var(--text-dim);
+}

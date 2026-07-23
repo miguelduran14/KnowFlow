@@ -4,6 +4,12 @@
   "description": "COBOL comprehension and onboarding tool — parse deterministically, explain with AI",
   "license": "Apache-2.0",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "engines": {
     "node": ">=18"
   },

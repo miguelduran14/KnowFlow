@@ -1,0 +1,102 @@
+import {
+  Background,
+  Controls,
+  Handle,
+  MarkerType,
+  MiniMap,
+  Position,
+  ReactFlow,
+  type Edge,
+  type Node,
+  type NodeProps,
+} from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
+import type { FlowResult } from 'knowflow'
+import { useEffect, useState } from 'react'
+import { layoutFlow, type CanvasNode } from './layout.js'
+
+type CobolNode = Node<{ canvas: CanvasNode }, 'cobol'>
+
+function CobolNodeView({ data }: NodeProps<CobolNode>) {
+  const { canvas } = data
+  return (
+    <div className={`node node--${canvas.variant}`} style={{ width: canvas.width, minHeight: canvas.height }}>
+      <Handle type="target" position={Position.Top} className="handle" />
+      <span className="node__label">{canvas.label}</span>
+      {canvas.terminates && <span className="node__badge">fin de programa</span>}
+      {canvas.section && <span className="node__section">{canvas.section}</span>}
+      <Handle type="source" position={Position.Bottom} className="handle" />
+    </div>
+  )
+}
+
+const nodeTypes = { cobol: CobolNodeView }
+
+const EDGE_COLOR: Record<string, string> = {
+  perform: '#7aa2f7',
+  goto: '#e0af68',
+  call: '#9ece6a',
+}
+
+export function FlowCanvas({ flow }: { flow: FlowResult }) {
+  const [nodes, setNodes] = useState<CobolNode[]>([])
+  const [edges, setEdges] = useState<Edge[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    layoutFlow(flow).then(graph => {
+      if (cancelled) return
+      setNodes(
+        graph.nodes.map(n => ({
+          id: n.id,
+          type: 'cobol' as const,
+          position: { x: n.x, y: n.y },
+          data: { canvas: n },
+        })),
+      )
+      setEdges(
+        graph.edges.map(e => {
+          const color = e.toMissing ? '#f7768e' : EDGE_COLOR[e.kind] ?? '#7aa2f7'
+          return {
+            id: e.id,
+            source: e.source,
+            target: e.target,
+            label: e.label,
+            type: 'smoothstep',
+            style: {
+              stroke: color,
+              strokeWidth: 1.6,
+              ...(e.kind === 'call' ? { strokeDasharray: e.dynamic ? '3 3' : '7 4' } : {}),
+            },
+            labelStyle: { fill: '#c0caf5', fontSize: 11 },
+            labelBgStyle: { fill: '#1f2335', fillOpacity: 0.9 },
+            labelBgPadding: [6, 3] as [number, number],
+            labelBgBorderRadius: 4,
+            markerEnd: { type: MarkerType.ArrowClosed, color },
+          }
+        }),
+      )
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [flow])
+
+  return (
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      nodeTypes={nodeTypes}
+      fitView
+      minZoom={0.2}
+      nodesDraggable
+      nodesConnectable={false}
+      edgesFocusable={false}
+      proOptions={{ hideAttribution: false }}
+    >
+      <Background gap={24} size={1.5} color="#2a2f45" />
+      <Controls showInteractive={false} />
+      <MiniMap pannable zoomable className="minimap" />
+    </ReactFlow>
+  )
+}
