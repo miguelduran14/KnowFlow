@@ -3,7 +3,25 @@ export type DataType =
   | 'alphanumeric'
   | 'numeric'
   | 'packed-decimal'
+  | 'binary'
+  | 'float-single'
+  | 'float-double'
   | 'group'
+
+/** Un valor de condición (nivel 88) asociado a su campo padre */
+export interface ConditionValue {
+  /** Nombre del nivel 88 */
+  name: string
+  /** Literales/tokens tal como aparecen tras VALUE(S) — incluye THRU sin resolver como rango */
+  values: string[]
+}
+
+/** OCCURS ... DEPENDING ON — reconocido y marcado como variable, sin resolver numéricamente */
+export interface OccursDepending {
+  min: number
+  max?: number | undefined
+  dependingOn: string
+}
 
 /** Campo individual del esquema */
 export interface SchemaField {
@@ -13,9 +31,9 @@ export interface SchemaField {
   name: string
   /** Tipo interpretado */
   type: DataType
-  /** Cláusula PIC original, p. ej. "S9(7)V99". Ausente en groups */
+  /** Cláusula PIC original, p. ej. "S9(7)V99". Ausente en groups y en COMP-1/COMP-2 sin PIC */
   picture?: string | undefined
-  /** USAGE explícito (COMP-3…). Ausente = DISPLAY */
+  /** USAGE explícito normalizado (COMP-3, COMP, COMP-1, COMP-2, BINARY, PACKED-DECIMAL). Ausente = DISPLAY */
   usage?: string | undefined
   /** Longitud en memoria, en bytes */
   lengthInBytes: number
@@ -23,6 +41,14 @@ export interface SchemaField {
   offset: number
   /** Hijos directos (para ítems de grupo) */
   children: SchemaField[]
+  /** Nombre del campo que este campo redefine — comparte offset, no consume memoria nueva */
+  redefines?: string | undefined
+  /** Repetición OCCURS fija */
+  occurs?: number | undefined
+  /** OCCURS ... DEPENDING ON */
+  occursDepending?: OccursDepending | undefined
+  /** Niveles 88 asociados a este campo. NUNCA aparecen en `children` */
+  conditionValues?: ConditionValue[] | undefined
 }
 
 /** Resultado estructural del parser */

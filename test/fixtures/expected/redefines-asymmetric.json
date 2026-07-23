@@ -1,0 +1,41 @@
+{
+  "records": [
+    {
+      "level": 1,
+      "name": "SAMPLE-WIDE-VIEW",
+      "type": "group",
+      "lengthInBytes": 15,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "SHORT-VIEW",
+          "type": "alphanumeric",
+          "picture": "X(5)",
+          "lengthInBytes": 5,
+          "offset": 0,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "WIDE-VIEW",
+          "type": "alphanumeric",
+          "picture": "X(12)",
+          "lengthInBytes": 12,
+          "offset": 0,
+          "children": [],
+          "redefines": "SHORT-VIEW"
+        },
+        {
+          "level": 5,
+          "name": "AFTER-REDEFINES",
+          "type": "alphanumeric",
+          "picture": "X(3)",
+          "lengthInBytes": 3,
+          "offset": 12,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

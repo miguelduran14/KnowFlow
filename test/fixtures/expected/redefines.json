@@ -1,0 +1,41 @@
+{
+  "records": [
+    {
+      "level": 1,
+      "name": "SAMPLE-AREA",
+      "type": "group",
+      "lengthInBytes": 14,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "RAW-BYTES",
+          "type": "alphanumeric",
+          "picture": "X(10)",
+          "lengthInBytes": 10,
+          "offset": 0,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "NUMERIC-VIEW",
+          "type": "numeric",
+          "picture": "9(10)",
+          "lengthInBytes": 10,
+          "offset": 0,
+          "children": [],
+          "redefines": "RAW-BYTES"
+        },
+        {
+          "level": 5,
+          "name": "NEXT-FIELD",
+          "type": "alphanumeric",
+          "picture": "X(4)",
+          "lengthInBytes": 4,
+          "offset": 10,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

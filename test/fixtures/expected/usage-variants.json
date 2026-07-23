@@ -1,0 +1,70 @@
+{
+  "records": [
+    {
+      "level": 1,
+      "name": "SAMPLE-USAGES",
+      "type": "group",
+      "lengthInBytes": 27,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "BIN-SMALL",
+          "type": "binary",
+          "picture": "S9(3)",
+          "usage": "COMP",
+          "lengthInBytes": 2,
+          "offset": 0,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "BIN-LARGE",
+          "type": "binary",
+          "picture": "S9(8)",
+          "usage": "BINARY",
+          "lengthInBytes": 4,
+          "offset": 2,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "FLOAT-SINGLE",
+          "type": "float-single",
+          "usage": "COMP-1",
+          "lengthInBytes": 4,
+          "offset": 6,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "FLOAT-DOUBLE",
+          "type": "float-double",
+          "usage": "COMP-2",
+          "lengthInBytes": 8,
+          "offset": 10,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "PACKED-ALT",
+          "type": "packed-decimal",
+          "picture": "S9(5)V99",
+          "usage": "PACKED-DECIMAL",
+          "lengthInBytes": 4,
+          "offset": 18,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "SIGNED-DISPLAY",
+          "type": "numeric",
+          "picture": "S9(4)",
+          "lengthInBytes": 5,
+          "offset": 22,
+          "children": []
+        }
+      ]
+    }
+  ]
+}

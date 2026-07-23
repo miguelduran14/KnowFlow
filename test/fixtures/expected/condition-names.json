@@ -1,0 +1,50 @@
+{
+  "records": [
+    {
+      "level": 1,
+      "name": "SAMPLE-STATUS",
+      "type": "group",
+      "lengthInBytes": 1,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "STATUS-CODE",
+          "type": "alphanumeric",
+          "picture": "X(1)",
+          "lengthInBytes": 1,
+          "offset": 0,
+          "children": [],
+          "conditionValues": [
+            {
+              "name": "STATUS-ACTIVE",
+              "values": [
+                "'A'"
+              ]
+            },
+            {
+              "name": "STATUS-PENDING",
+              "values": [
+                "'P'"
+              ]
+            },
+            {
+              "name": "STATUS-CLOSED",
+              "values": [
+                "'C'",
+                "'X'"
+              ]
+            },
+            {
+              "name": "STATUS-UNKNOWN",
+              "values": [
+                "'U'",
+                "'Z'"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
