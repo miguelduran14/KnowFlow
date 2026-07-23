@@ -1,0 +1,105 @@
+{
+  "records": [
+    {
+      "level": 1,
+      "name": "CHECKOUT-RECORD",
+      "type": "group",
+      "lengthInBytes": 75,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "BOOK-INFO",
+          "type": "group",
+          "lengthInBytes": 46,
+          "offset": 0,
+          "children": [
+            {
+              "level": 10,
+              "name": "BOOK-ISBN",
+              "type": "alphanumeric",
+              "picture": "X(13)",
+              "lengthInBytes": 13,
+              "offset": 0,
+              "children": []
+            },
+            {
+              "level": 10,
+              "name": "BOOK-TITLE",
+              "type": "alphanumeric",
+              "picture": "X(30)",
+              "lengthInBytes": 30,
+              "offset": 13,
+              "children": []
+            },
+            {
+              "level": 10,
+              "name": "COPY-NUMBER",
+              "type": "numeric",
+              "picture": "9(3)",
+              "lengthInBytes": 3,
+              "offset": 43,
+              "children": []
+            }
+          ]
+        },
+        {
+          "level": 5,
+          "name": "LOAN-INFO",
+          "type": "group",
+          "lengthInBytes": 29,
+          "offset": 46,
+          "children": [
+            {
+              "level": 10,
+              "name": "BORROWER-ID",
+              "type": "numeric",
+              "picture": "9(6)",
+              "lengthInBytes": 6,
+              "offset": 46,
+              "children": []
+            },
+            {
+              "level": 10,
+              "name": "LOAN-DATE",
+              "type": "alphanumeric",
+              "picture": "X(8)",
+              "lengthInBytes": 8,
+              "offset": 52,
+              "children": []
+            },
+            {
+              "level": 10,
+              "name": "DUE-DATE",
+              "type": "alphanumeric",
+              "picture": "X(8)",
+              "lengthInBytes": 8,
+              "offset": 60,
+              "children": []
+            },
+            {
+              "level": 10,
+              "name": "FINE-BALANCE",
+              "type": "packed-decimal",
+              "picture": "S9(7)V99",
+              "usage": "COMP-3",
+              "lengthInBytes": 5,
+              "offset": 68,
+              "children": []
+            },
+            {
+              "level": 10,
+              "name": "RENEWAL-COUNT",
+              "type": "packed-decimal",
+              "picture": "S9(2)V",
+              "usage": "COMP-3",
+              "lengthInBytes": 2,
+              "offset": 73,
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
