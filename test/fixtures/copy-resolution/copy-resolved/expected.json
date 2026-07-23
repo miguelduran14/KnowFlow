@@ -1,0 +1,51 @@
+{
+  "records": [
+    {
+      "level": 1,
+      "name": "MAIN-RECORD",
+      "type": "group",
+      "lengthInBytes": 11,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "HEADER-CODE",
+          "type": "alphanumeric",
+          "picture": "X(4)",
+          "lengthInBytes": 4,
+          "offset": 0,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "DETAIL-AMOUNT",
+          "type": "packed-decimal",
+          "picture": "S9(5)V99",
+          "usage": "COMP-3",
+          "lengthInBytes": 4,
+          "offset": 4,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "DETAIL-FLAG",
+          "type": "alphanumeric",
+          "picture": "X(1)",
+          "lengthInBytes": 1,
+          "offset": 8,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "TRAILER-CODE",
+          "type": "alphanumeric",
+          "picture": "X(2)",
+          "lengthInBytes": 2,
+          "offset": 9,
+          "children": []
+        }
+      ]
+    }
+  ],
+  "missingCopybooks": []
+}

@@ -1,0 +1,32 @@
+{
+  "records": [
+    {
+      "level": 1,
+      "name": "MAIN-RECORD",
+      "type": "group",
+      "lengthInBytes": 9,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "WIDGET",
+          "type": "alphanumeric",
+          "picture": "X(6)",
+          "lengthInBytes": 6,
+          "offset": 0,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "PLACEHOLDER-CODE",
+          "type": "numeric",
+          "picture": "9(3)",
+          "lengthInBytes": 3,
+          "offset": 6,
+          "children": []
+        }
+      ]
+    }
+  ],
+  "missingCopybooks": []
+}

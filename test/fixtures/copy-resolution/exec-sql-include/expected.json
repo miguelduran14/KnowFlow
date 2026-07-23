@@ -1,0 +1,42 @@
+{
+  "records": [
+    {
+      "level": 1,
+      "name": "MAIN-RECORD",
+      "type": "group",
+      "lengthInBytes": 12,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "REC-ID",
+          "type": "numeric",
+          "picture": "9(5)",
+          "lengthInBytes": 5,
+          "offset": 0,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "ROW-STATUS",
+          "type": "alphanumeric",
+          "picture": "X(1)",
+          "lengthInBytes": 1,
+          "offset": 5,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "ROW-AMOUNT",
+          "type": "packed-decimal",
+          "picture": "S9(9)V99",
+          "usage": "COMP-3",
+          "lengthInBytes": 6,
+          "offset": 6,
+          "children": []
+        }
+      ]
+    }
+  ],
+  "missingCopybooks": []
+}

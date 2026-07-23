@@ -7,6 +7,8 @@ export type DataType =
   | 'float-single'
   | 'float-double'
   | 'group'
+  /** Hueco dejado por un COPY/EXEC SQL INCLUDE cuyo member no se aportó */
+  | 'unresolved-copy'
 
 /** Un valor de condición (nivel 88) asociado a su campo padre */
 export interface ConditionValue {
@@ -49,10 +51,21 @@ export interface SchemaField {
   occursDepending?: OccursDepending | undefined
   /** Niveles 88 asociados a este campo. NUNCA aparecen en `children` */
   conditionValues?: ConditionValue[] | undefined
+  /** Solo si type === 'unresolved-copy': el member de COPY/EXEC SQL INCLUDE que faltó */
+  unresolvedCopyMember?: string | undefined
+  /**
+   * true si este offset (o el de un campo anterior en el mismo nivel, o el
+   * tamaño de un grupo que lo contiene) descansa sobre un hueco sin
+   * resolver — el número sigue calculado para no romper la aritmética,
+   * pero no es un hecho verificado (ADR-0003).
+   */
+  offsetUnknown?: boolean | undefined
 }
 
 /** Resultado estructural del parser */
 export interface ParseResult {
   /** Registros de nivel 01 (o 77) extraídos de la DATA DIVISION */
   records: SchemaField[]
+  /** Members de COPY/EXEC SQL INCLUDE no resueltos — lo que falta para completar el esquema */
+  missingCopybooks: string[]
 }

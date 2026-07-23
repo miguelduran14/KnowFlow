@@ -1,0 +1,56 @@
+{
+  "records": [
+    {
+      "level": 1,
+      "name": "A-RECORD",
+      "type": "group",
+      "lengthInBytes": 3,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "SUB-GROUP",
+          "type": "group",
+          "lengthInBytes": 1,
+          "offset": 0,
+          "children": [
+            {
+              "level": 10,
+              "name": "LEAF-FIELD",
+              "type": "alphanumeric",
+              "picture": "X(1)",
+              "lengthInBytes": 1,
+              "offset": 0,
+              "children": []
+            },
+            {
+              "level": 0,
+              "name": "MISSING-AFTER-GROUP",
+              "type": "unresolved-copy",
+              "lengthInBytes": 0,
+              "offset": 1,
+              "children": [],
+              "unresolvedCopyMember": "MISSING-AFTER-GROUP",
+              "offsetUnknown": true
+            }
+          ],
+          "offsetUnknown": true
+        },
+        {
+          "level": 5,
+          "name": "AFTER-COPY",
+          "type": "alphanumeric",
+          "picture": "X(2)",
+          "lengthInBytes": 2,
+          "offset": 1,
+          "children": [],
+          "offsetUnknown": true
+        }
+      ],
+      "offsetUnknown": true
+    }
+  ],
+  "missingCopybooks": [
+    "MISSING-AFTER-GROUP"
+  ]
+}

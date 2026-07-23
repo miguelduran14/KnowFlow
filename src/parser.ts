@@ -1,5 +1,7 @@
 import type { ConditionValue, OccursDepending, ParseResult, SchemaField } from './types.js'
 import { parsePic, usageImpliesFixedSize } from './pic.js'
+import { joinContinuations } from './lines.js'
+import { resolveCopies } from './copy-resolver.js'
 
 interface RawField {
   kind: 'field'
@@ -19,34 +21,12 @@ interface RawCondition {
   values: string[]
 }
 
-type RawStatement = RawField | RawCondition
-
-/**
- * Une líneas de continuación COBOL (columna 7 = '-' o carácter no blanco
- * en área A tras un punto y aparte) en sentencias lógicas.
- * Para el subconjunto del slice 1 basta con juntar líneas que no empiezan
- * un nuevo número de nivel ni son directivas.
- */
-function joinContinuations(lines: string[]): string[] {
-  const logical: string[] = []
-
-  for (const raw of lines) {
-    const line = raw.length > 6 ? raw.slice(6) : raw
-    const trimmed = line.trimStart()
-
-    if (trimmed === '' || trimmed.startsWith('*')) continue
-
-    const startsNewStatement = /^\s*\d{1,2}\s+/.test(trimmed)
-
-    if (startsNewStatement || logical.length === 0) {
-      logical.push(trimmed)
-    } else {
-      logical[logical.length - 1] += ' ' + trimmed.replace(/^-\s*/, '')
-    }
-  }
-
-  return logical
+interface RawUnresolvedCopy {
+  kind: 'unresolved-copy'
+  member: string
 }
+
+type RawStatement = RawField | RawCondition | RawUnresolvedCopy
 
 const LEVEL_RE = /^(\d{1,2})\s+([\w-]+)/
 const PIC_RE = /PIC(?:TURE)?\s+IS\s+([\w()V,\-+*/]+)|PIC(?:TURE)?\s+([\w()V,\-+*/]+)/i
@@ -139,6 +119,41 @@ function buildTree(statements: RawStatement[]): SchemaField[] {
       continue
     }
 
+    if (raw.kind === 'unresolved-copy') {
+      // level:0 y lengthInBytes:0 son sentinelas, no hechos verificados:
+      // ver `type === 'unresolved-copy'` antes de confiar en ellos.
+      const field: SchemaField = {
+        level: 0,
+        name: raw.member,
+        type: 'unresolved-copy',
+        lengthInBytes: 0,
+        offset: 0,
+        children: [],
+        unresolvedCopyMember: raw.member,
+      }
+
+      // Un COPY no lleva nivel propio, así que no hay número con el que
+      // decidir dónde encaja exactamente. Lo único que sí sabemos: NUNCA
+      // puede ser hijo de un campo elemental (estructuralmente imposible
+      // en COBOL) — así que se desapila hasta el grupo abierto más
+      // profundo. Sigue siendo una elección, no un hecho verificado: con
+      // el member ausente no hay forma de saber si el COPY real habría
+      // cerrado ese grupo o seguido añadiéndole campos.
+      while (stack.length > 0 && stack[stack.length - 1]!.type !== 'group') {
+        stack.pop()
+      }
+
+      const parent = stack.length > 0 ? stack[stack.length - 1] : undefined
+      if (parent) {
+        parent.children.push(field)
+      } else {
+        roots.push(field)
+      }
+
+      lastField = field
+      continue
+    }
+
     const hasOwnSize = !!raw.picture || usageImpliesFixedSize(raw.usage)
     const pic = hasOwnSize ? parsePic(raw.picture, raw.usage, { signSeparate: raw.signSeparate }) : undefined
 
@@ -193,10 +208,21 @@ function buildTree(statements: RawStatement[]): SchemaField[] {
  * siguientes no se solapen con el peor caso, el puntero de offset sí avanza
  * usando el máximo declarado (o el mínimo si no hay máximo) — una reserva
  * conservadora, no un valor verificado.
+ *
+ * Huecos sin resolver (type === 'unresolved-copy'): a partir de ahí no se
+ * sabe cuántos bytes ocupa lo que falta, así que calcular el offset del
+ * siguiente campo como si el hueco midiera 0 bytes sería inventar un
+ * número disfrazado de hecho verificado (ADR-0003). En su lugar, se marca
+ * `offsetUnknown: true` en el propio hueco y en todo lo que venga después
+ * en ese mismo nivel — y, si un grupo contiene un hueco en su interior, el
+ * propio grupo (y sus hermanos posteriores en el nivel padre) hereda la
+ * marca también, porque su longitud total ya no es fiable.
  */
-function resolveOffsets(fields: SchemaField[], baseOffset: number): number {
+function resolveOffsets(fields: SchemaField[], baseOffset: number): { length: number; hasUnknown: boolean } {
   let offset = baseOffset
   let clusterMaxLength = 0
+  let offsetUnknownFromHere = false
+  let anyUnknown = false
 
   for (const field of fields) {
     if (field.redefines) {
@@ -207,8 +233,25 @@ function resolveOffsets(fields: SchemaField[], baseOffset: number): number {
       clusterMaxLength = 0
     }
 
+    if (offsetUnknownFromHere) {
+      field.offsetUnknown = true
+    }
+    if (field.type === 'unresolved-copy') {
+      field.offsetUnknown = true
+      offsetUnknownFromHere = true
+    }
+
     if (field.children.length > 0) {
-      field.lengthInBytes = resolveOffsets(field.children, field.offset)
+      const childResult = resolveOffsets(field.children, field.offset)
+      field.lengthInBytes = childResult.length
+      if (childResult.hasUnknown) {
+        field.offsetUnknown = true
+        offsetUnknownFromHere = true
+      }
+    }
+
+    if (field.offsetUnknown) {
+      anyUnknown = true
     }
 
     if (field.occurs) {
@@ -223,21 +266,31 @@ function resolveOffsets(fields: SchemaField[], baseOffset: number): number {
   }
 
   offset += clusterMaxLength
-  return offset - baseOffset
+  return { length: offset - baseOffset, hasUnknown: anyUnknown }
 }
 
 /**
  * Parsea un copybook COBOL trivial y extrae su esquema de campos.
- * Alcance de T1+T2: niveles jerárquicos, PIC X/9, OCCURS (fijo y
- * DEPENDING ON reconocido), REDEFINES, niveles 88 y USAGE
- * (DISPLAY, COMP, COMP-1, COMP-2, COMP-3, BINARY, PACKED-DECIMAL).
- * No espera divisiones ni secciones — un copybook es solo la definición
- * del registro (eso es lo que se resuelve vía COPY en un programa real).
+ * Alcance de T1+T2+T3: niveles jerárquicos, PIC X/9, OCCURS (fijo y
+ * DEPENDING ON reconocido), REDEFINES, niveles 88, USAGE (DISPLAY, COMP,
+ * COMP-1, COMP-2, COMP-3, BINARY, PACKED-DECIMAL), y resolución de COPY
+ * (con REPLACING) y EXEC SQL INCLUDE contra `copybooks`. Un member no
+ * aportado en `copybooks` queda como hueco explícito en `records` y
+ * listado en `missingCopybooks` — nunca se inventa su estructura.
  */
-export function parse(source: string): ParseResult {
-  const statements = joinContinuations(source.split(/\r?\n/))
-    .map(parseStatement)
-    .filter((s): s is RawStatement => s !== undefined)
+export function parse(source: string, copybooks: Map<string, string> = new Map()): ParseResult {
+  const rawStatements = joinContinuations(source.split(/\r?\n/))
+  const { statements: resolved, missingCopybooks } = resolveCopies(rawStatements, copybooks)
+
+  const statements: RawStatement[] = []
+  for (const item of resolved) {
+    if (item.kind === 'unresolved-copy') {
+      statements.push({ kind: 'unresolved-copy', member: item.member })
+      continue
+    }
+    const parsed = parseStatement(item.statement)
+    if (parsed) statements.push(parsed)
+  }
 
   const roots = buildTree(statements)
 
@@ -248,5 +301,5 @@ export function parse(source: string): ParseResult {
     resolveOffsets([root], 0)
   }
 
-  return { records: roots }
+  return { records: roots, missingCopybooks }
 }
