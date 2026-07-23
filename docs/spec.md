@@ -3,6 +3,11 @@
 > Sintetizado de la sesión de grilling del 2026-07-14. Fuentes: `CONTEXT.md`, `docs/adr/0001`–`0004`.
 > Regla de este documento: **no contiene decisiones que no se tomaran en el grilling**; lo no
 > resuelto está marcado como **PENDIENTE**.
+>
+> **Enmienda 2026-07-23:** tras cerrar el parser de data division (T1–T3), se reordena la
+> prioridad de slice 1 para anteponer el parser de procedure division (párrafos, grafo
+> PERFORM/CALL/GO TO) a la exportación Markdown (T4) y al inventario EXEC (T5), que quedan
+> pausados sin cancelarse. Ver `CONTEXT.md` → Historial de decisiones.
 
 ## Problem Statement
 
@@ -43,16 +48,17 @@ explicación encima de hechos verificados. Nunca adivina estructura.
 5. Como dev junior sin todos los copybooks a mano, quiero que la herramienta me dé lo que pueda y marque explícitamente cada hueco ("copybook no disponible, estructura desconocida"), para tener información honesta en vez de inventada.
 6. Como dev junior, quiero que la propia salida me diga qué copybooks faltan para completar el esquema, para saber exactamente qué bajarme del PDS.
 7. Como dev junior, quiero saber qué tablas DB2 toca el programa, cuántos cursores tiene y qué comandos CICS usa (inventario de bloques EXEC), para responder a la primera pregunta del onboarding: "¿este programa qué toca?".
-8. Como dev junior, quiero un resumen del programa en lenguaje llano generado por IA sobre los hechos del parser, para orientarme antes de leer el código.
-9. Como dev junior, quiero que cada resultado lleve una etiqueta de nivel de fidelidad (verificado por parser / parcialmente verificado / solo LLM), para saber cuánto confiar en cada afirmación.
-10. Como dev junior, quiero pegar un trozo suelto de código y recibir una explicación honesta (etiquetada como parcialmente verificada), para resolver dudas puntuales sin montar el flujo entero.
-11. Como dev junior, quiero exportar el esquema como tabla Markdown, para pegarlo en la wiki o en un traspaso.
-12. Como usuario en banca/seguros, quiero que mi código no pase por ningún servidor del autor de la herramienta, para no violar las políticas de IP de mi empresa.
-13. Como usuario, quiero configurar mi propia clave de API y elegir proveedor (Anthropic, OpenAI u otro) y modelo, para usar el que mi empresa tenga aprobado y controlar el coste.
-14. Como dev junior, quiero lanzar la herramienta con un solo comando (`npx knowflow`), para probarla con fricción cero.
-15. Como mantenedor del proyecto, quiero fixtures golden-file (COBOL de entrada → esquema esperado) que pueda juzgar sabiendo COBOL, para verificar el parser sin saber leer TypeScript.
-16. Como mantenedor del proyecto, quiero que cualquier salida del LLM que afirme estructura no presente en los hechos del parser cuente como bug, para proteger la promesa de no-invención.
-17. *(Slice 2)* Como dev junior, quiero ver un mapa del job JCL (job → steps → programas → datasets) explicado en lenguaje llano, para entender la cadena completa y no solo un programa.
+8. *(Añadida 2026-07-23)* Como dev junior, quiero ver un diagrama del flujo del programa (párrafos y las llamadas PERFORM/CALL/GO TO entre ellos), para entender el orden de ejecución sin rastrear el código a mano.
+9. Como dev junior, quiero un resumen del programa en lenguaje llano generado por IA sobre los hechos del parser —incluido el flujo entre párrafos—, para orientarme antes de leer el código.
+10. Como dev junior, quiero que cada resultado lleve una etiqueta de nivel de fidelidad (verificado por parser / parcialmente verificado / solo LLM), para saber cuánto confiar en cada afirmación.
+11. Como dev junior, quiero pegar un trozo suelto de código y recibir una explicación honesta (etiquetada como parcialmente verificada), para resolver dudas puntuales sin montar el flujo entero.
+12. Como dev junior, quiero exportar el esquema como tabla Markdown, para pegarlo en la wiki o en un traspaso.
+13. Como usuario en banca/seguros, quiero que mi código no pase por ningún servidor del autor de la herramienta, para no violar las políticas de IP de mi empresa.
+14. Como usuario, quiero configurar mi propia clave de API y elegir proveedor (Anthropic, OpenAI u otro) y modelo, para usar el que mi empresa tenga aprobado y controlar el coste.
+15. Como dev junior, quiero lanzar la herramienta con un solo comando (`npx knowflow`), para probarla con fricción cero.
+16. Como mantenedor del proyecto, quiero fixtures golden-file (COBOL de entrada → esquema esperado) que pueda juzgar sabiendo COBOL, para verificar el parser sin saber leer TypeScript.
+17. Como mantenedor del proyecto, quiero que cualquier salida del LLM que afirme estructura no presente en los hechos del parser cuente como bug, para proteger la promesa de no-invención.
+18. *(Slice 2)* Como dev junior, quiero ver un mapa del job JCL (job → steps → programas → datasets) explicado en lenguaje llano, para entender la cadena completa y no solo un programa.
 
 ### Slice 2 / Roadmap
 
@@ -66,9 +72,10 @@ Tomadas en el grilling y registradas como ADRs; aquí la vista consolidada:
 1. **Stack: TypeScript/Node de punta a punta** (ADR-0001). Un solo lenguaje para motor, arnés y
    GUI; TS estricto como red de seguridad sobre código escrito mayormente por agentes de IA.
 2. **Parser propio del subconjunto** (ADR-0001). Sin JVM, sin ProLeap/Koopa (Java, AGPL,
-   semi-abandonado). Subconjunto del slice 1: COPY/REPLACING + `EXEC SQL INCLUDE` + data division
-   (niveles, PIC, OCCURS, REDEFINES, COMP-*). Parser externo solo se reevalúa si el grafo PERFORM
-   completo lo exige.
+   semi-abandonado). Subconjunto del slice 1 — ampliado el 2026-07-23: COPY/REPLACING +
+   `EXEC SQL INCLUDE` + data division (niveles, PIC, OCCURS, REDEFINES, COMP-*) **más** procedure
+   division (párrafos, grafo PERFORM/CALL/GO TO), priorizada sobre la exportación Markdown y el
+   inventario EXEC. Parser externo solo se reevalúa si aparece un caso que este subconjunto no cubre.
 3. **Arquitectura: pipeline agnóstico al tipo de artefacto** — *artefacto → hechos estructurales →
    paquete de explicación*. COBOL es el primer artefacto; JCL será el segundo. El pipeline no
    asume "esto solo traga COBOL".
@@ -114,9 +121,13 @@ Tomadas en el grilling y registradas como ADRs; aquí la vista consolidada:
 
 ## Dentro del MVP (slice 1)
 
-- Resolución de COPY/REPLACING y `EXEC SQL INCLUDE` (con modo degradado marcando huecos).
-- Data division → esquema legible como tabla Markdown exportable.
+- Resolución de COPY/REPLACING y `EXEC SQL INCLUDE` (con modo degradado marcando huecos). **Cerrado (T1–T3).**
+- Data division → esquema legible como tabla Markdown exportable. Parser del esquema cerrado
+  (T1–T3); la exportación a tabla Markdown (T4) queda **pausada**, prioridad tras el flujo.
+- Parser de procedure division: párrafos y grafo PERFORM/CALL/GO TO, con diagrama de flujo.
+  *(Añadido 2026-07-23 — prioridad actual.)*
 - Inventario de bloques EXEC SQL/CICS (qué toca el programa), sin interpretación semántica.
+  **Pausado**, prioridad tras el flujo.
 - Entrada por fichero (arrastrar) y por código pegado (programa o fragmento).
 - Etiquetas de nivel de fidelidad en toda salida.
 - Capa LLM pluggable BYOK con al menos los adaptadores Claude y OpenAI/GPT.
@@ -133,7 +144,6 @@ Tomadas en el grilling y registradas como ADRs; aquí la vista consolidada:
 - **Interpretación semántica profunda de EXEC SQL/CICS** (cursores, flujo CICS,
   pseudo-conversacional) — slice posterior.
 - **Capturas de pantalla como entrada** (nivel 3 de fidelidad) — feature posterior.
-- **Grafo PERFORM completo** de la procedure division — slice posterior.
 - **API pública / JSON versionado para terceros** — el JSON es interno hasta que alguien pida lo
   contrario.
 - **Panel de VS Code y CLI como producto** — descartados como superficie del MVP.
@@ -151,12 +161,16 @@ El slice 1 se considera cerrado cuando:
    explícitamente, lista qué falta, y ninguna parte de la salida inventa la estructura ausente.
 4. **El inventario EXEC responde "¿qué toca este programa?":** tablas nombradas, número de
    cursores, comandos CICS presentes.
-5. **Fixtures en verde sobre el corpus:** casos límite de NIST/GnuCOBOL para el subconjunto del
+5. *(Añadido 2026-07-23)* **El grafo de flujo es correcto en su subconjunto:** dado un programa
+   del corpus, los párrafos y las aristas PERFORM/CALL/GO TO extraídas coinciden con el golden
+   file esperado — segunda prueba del foso, esta vez sobre comportamiento y no solo estructura de
+   datos.
+6. **Fixtures en verde sobre el corpus:** casos límite de NIST/GnuCOBOL para el subconjunto del
    slice + al menos programas reales de CardDemo pasando de punta a punta.
-6. **La explicación LLM es juzgada correcta por el autor** sobre programas de CardDemo (él lee el
-   original y la explicación, y no encuentra afirmaciones falsas), con etiquetas de fidelidad
-   presentes en la salida.
-7. **La restricción de IP se mantiene intacta:** cero código corporativo en el repo, en los
+7. **La explicación LLM es juzgada correcta por el autor** sobre programas de CardDemo (él lee el
+   original y la explicación —incluida la narración del flujo— y no encuentra afirmaciones falsas),
+   con etiquetas de fidelidad presentes en la salida y un diagrama de flujo fiel al grafo verificado.
+8. **La restricción de IP se mantiene intacta:** cero código corporativo en el repo, en los
    fixtures y en cualquier sesión de agente.
 
 ## Further Notes / PENDIENTE

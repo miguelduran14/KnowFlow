@@ -53,14 +53,23 @@ Corolarios acordados:
 arrastrar ficheros o pegar código/fragmentos.
 
 ## Roadmap de slices
-1. **Slice 1 (MVP)**: resolución de COPY/REPLACING + `EXEC SQL INCLUDE` + data division →
-   esquema legible como tabla Markdown exportable. Inventario de bloques EXEC (tablas tocadas,
-   cursores, comandos CICS) sin interpretación semántica. Modo degradado con no-invención.
+1. **Slice 1 (MVP)** — reordenado el 2026-07-23 (ver "Historial de decisiones"):
+   - **Cerrado**: resolución de COPY/REPLACING + `EXEC SQL INCLUDE` + data division completa
+     (niveles, PIC, OCCURS, REDEFINES, niveles 88, USAGE) → parser con modo degradado y no-invención.
+   - **Siguiente (prioridad actual)**: parser de PROCEDURE DIVISION — párrafos y grafo
+     PERFORM/CALL/GO TO — como capa de hechos verificados para el flujo. Sin esto, la explicación
+     en lenguaje natural de "qué hace el programa" y el diagrama de flujo se apoyarían en que el
+     LLM adivine sobre texto crudo, exactamente el punto débil que este proyecto existe para batir.
+   - **Pausado, no cancelado**: tabla Markdown exportable del esquema de datos e inventario de
+     bloques EXEC SQL/CICS (tablas, cursores, comandos) sin interpretación semántica.
+   - La capa LLM (proveedor pluggable) y el paquete de explicación se construyen sobre AMBOS
+     hechos —esquema de datos y grafo de flujo— para que el resumen en lenguaje llano y el
+     diagrama de flujo sean fiables, no una narración libre del modelo.
 2. **Slice 2**: JCL — explicar y encadenar job → steps → programas → datasets (mapa del job en
-   Mermaid). Barato de parsear; gana valor sobre el explicador de programa. Junto con esto, el
-   **mapa de bytes visual** (ver "Superficie" abajo).
+   Mermaid), con el mismo principio: parser de hechos primero, diagrama y explicación encima.
+   Junto con esto, el **mapa de bytes visual** (ver "Superficie" abajo).
 3. **Después**: interpretación semántica profunda de SQL/CICS, capturas de pantalla (nivel 3 de
-   fidelidad), grafo PERFORM completo.
+   fidelidad).
 
 ## Superficie
 **GUI web local** (localhost, sin servidor propio): arrastrar fichero, pegar código, resultado
@@ -114,3 +123,14 @@ futuro no está regalado. La marca/nombre se conserva. Ver ADR-0004.
 ## Historial de decisiones
 Las decisiones cerradas el 2026-07-14 (sesión de grilling) están registradas como ADRs en
 `docs/adr/`. Ante una decisión abierta, pregunta — no la cierres por tu cuenta (`AGENTS.md`).
+
+**2026-07-23 — reordenación del roadmap de slice 1.** Tras completar el parser de data division
+(T1-T3), se audita el estado del proyecto y se confirma que la prioridad real del autor es que la
+herramienta explique el *comportamiento* del programa (lenguaje natural + diagramas) para un
+junior, no solo su esquema de datos. Esto reabre la decisión del grilling que dejaba el "grafo
+PERFORM completo" fuera del MVP. Decisión: el parser de PROCEDURE DIVISION (párrafos,
+PERFORM/CALL/GO TO) pasa a ser la siguiente pieza a construir, por delante de la tabla Markdown
+exportable (T4) y el inventario EXEC SQL/CICS (T5), que quedan pausados sin cancelarse. Razón:
+la explicación en lenguaje natural del flujo necesita hechos verificados por parser antes de que
+el LLM narre nada — igual que ya se exige para los datos (principio de arquitectura, no
+negociable). El orden JCL-después-de-COBOL no cambia.
