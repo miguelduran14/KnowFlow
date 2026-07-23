@@ -43,8 +43,11 @@ Corolarios acordados:
 - **Regla dura de no-invención**: en modo degradado (copybook ausente), el hueco se marca
   explícitamente ("copybook no disponible, estructura desconocida"); el LLM tiene prohibido
   rellenarlo. Un hueco marcado es información honesta.
-- Salidas: Markdown (humanos) + JSON interno documentado (no API pública en MVP) + Mermaid (grafos,
-  sin Neo4j). Sin generación de JSON Schema ni tipos TS/Java.
+- Salidas: Markdown (humanos) + JSON interno documentado (no API pública en MVP) + grafos en dos
+  formas — **lienzo interactivo en la GUI (React Flow + elkjs, MIT)** como representación
+  principal, y **Mermaid como export de texto** (pegable en wikis/PRs, se renderiza sin la app).
+  El motor solo expone hechos (JSON) y texto (Mermaid); quien pinta el lienzo es la GUI (ADR-0002).
+  Sin Neo4j. Sin generación de JSON Schema ni tipos TS/Java.
 - Local-first / BYOK: el usuario pone su clave; el código no pasa por un servidor mío.
 
 ## Usuario objetivo
@@ -123,6 +126,15 @@ futuro no está regalado. La marca/nombre se conserva. Ver ADR-0004.
 ## Historial de decisiones
 Las decisiones cerradas el 2026-07-14 (sesión de grilling) están registradas como ADRs en
 `docs/adr/`. Ante una decisión abierta, pregunta — no la cierres por tu cuenta (`AGENTS.md`).
+
+**2026-07-23 — renderizado de grafos: React Flow + elkjs en la GUI; Mermaid queda como export.**
+Tras investigar alternativas (GoJS y yFiles descartados por licencia comercial de pago —
+incompatible con un proyecto Apache-2.0 distribuido por npx; JointJS y D3 viables pero con más
+peso/curva), se decide: el lienzo interactivo de la GUI usa **React Flow (`@xyflow/react`, MIT)**
+con layout automático de **elkjs** (Eclipse Layout Kernel, puerto JS mantenido; dagre está
+semi-abandonado). Mermaid **no se elimina**: cubre el caso "pegar el diagrama como texto en una
+wiki o PR y que se renderice solo". Reparto por capas fiel a ADR-0002: el motor expone hechos
+(`FlowResult` JSON) y texto (Mermaid); el lienzo React Flow es exclusivamente de la GUI.
 
 **2026-07-23 — reordenación del roadmap de slice 1.** Tras completar el parser de data division
 (T1-T3), se audita el estado del proyecto y se confirma que la prioridad real del autor es que la
