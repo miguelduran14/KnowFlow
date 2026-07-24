@@ -194,6 +194,86 @@ body,
   line-height: 1;
 }
 
+.notice--program {
+  color: var(--accent);
+  border-color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Cadena entre programas ───────────────────────────── */
+
+.chain {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chain__missing {
+  margin: 12px 14px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--missing);
+  border-radius: 6px;
+  color: var(--missing);
+  font-size: 12px;
+}
+
+.chain__canvas {
+  flex: 1;
+  min-height: 0;
+}
+
+.prog {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--bg-raised);
+  border: 1.5px solid var(--accent);
+  color: var(--text);
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+}
+
+.prog__name {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.prog__note {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.prog--supplied {
+  border-color: var(--ok);
+}
+
+.prog--missing {
+  border-color: var(--missing);
+  border-style: dashed;
+}
+
+.prog--missing .prog__name,
+.prog--missing .prog__note {
+  color: var(--missing);
+}
+
+.prog--dynamic {
+  border-color: #bb9af7;
+  border-style: dotted;
+}
+
+.prog--dynamic .prog__name,
+.prog--dynamic .prog__note {
+  color: #bb9af7;
+}
+
 /* ── Tabla de esquema ──────────────────────────────────── */
 
 .schema {

@@ -1,4 +1,4 @@
-import type { FlowEdge, FlowResult } from './types.js'
+import type { FlowEdge, FlowResult, LinkedFlow } from './types.js'
 
 /** Id de nodo Mermaid válido a partir de un nombre COBOL. En mayúsculas:
  *  COBOL es case-insensitive, así que "Main-Para" y "MAIN-PARA." deben
@@ -72,6 +72,42 @@ export function flowToMermaid(flow: FlowResult): string {
 
   for (const edge of flow.edges) {
     out.push(`  ${nodeId(edge.from)} -->|"${escapeLabel(edgeLabel(edge))}"| ${nodeId(edge.to)}`)
+  }
+
+  return out.join('\n') + '\n'
+}
+
+/**
+ * Renderiza la cadena entre programas como diagrama Mermaid: un nodo por
+ * programa y una arista por CALL que cruza la frontera. Igual que el resto
+ * de salidas, refleja los hechos tal cual: los programas no aportados y
+ * los destinos dinámicos se marcan, nunca se resuelven a ciegas.
+ */
+export function linkedFlowToMermaid(linked: LinkedFlow): string {
+  const out: string[] = ['flowchart LR']
+  const declared = new Set<string>()
+
+  for (const program of linked.programs) {
+    const id = nodeId(program.name)
+    declared.add(id)
+    out.push(`  ${id}["${escapeLabel(program.name)}"]`)
+  }
+
+  for (const call of linked.calls) {
+    const id = nodeId(call.toProgram)
+    if (declared.has(id)) continue
+    declared.add(id)
+    const label = call.dynamic
+      ? `${call.toProgram} — destino dinámico`
+      : `${call.toProgram} — fuente no aportado`
+    out.push(`  ${id}["${escapeLabel(label)}"]`)
+  }
+
+  for (const call of linked.calls) {
+    const label = call.dynamic ? `CALL dinámica (${call.fromParagraph})` : `CALL (${call.fromParagraph})`
+    out.push(
+      `  ${nodeId(call.fromProgram)} -->|"${escapeLabel(label)}"| ${nodeId(call.toProgram)}`,
+    )
   }
 
   return out.join('\n') + '\n'

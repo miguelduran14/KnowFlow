@@ -3,7 +3,6 @@ import {
   Controls,
   Handle,
   MarkerType,
-  MiniMap,
   Position,
   ReactFlow,
   type Edge,
@@ -11,56 +10,53 @@ import {
   type NodeProps,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import type { FlowResult } from 'knowflow'
+import type { LinkedFlow } from 'knowflow'
 import { useEffect, useState } from 'react'
-import { layoutFlow, type CanvasNode } from './layout.js'
+import { layoutChain, type ChainNode } from './layout.js'
 
-type CobolNode = Node<{ canvas: CanvasNode }, 'cobol'>
+type ProgramNode = Node<{ chain: ChainNode }, 'program'>
 
-function CobolNodeView({ data }: NodeProps<CobolNode>) {
-  const { canvas } = data
+function ProgramNodeView({ data }: NodeProps<ProgramNode>) {
+  const { chain } = data
   return (
-    <div className={`node node--${canvas.variant}`} style={{ width: canvas.width, minHeight: canvas.height }}>
-      <Handle type="target" position={Position.Top} className="handle" />
-      <span className="node__label">{canvas.label}</span>
-      {canvas.terminates && <span className="node__badge">fin de programa</span>}
-      {canvas.section && <span className="node__section">{canvas.section}</span>}
-      <Handle type="source" position={Position.Bottom} className="handle" />
+    <div className={`prog prog--${chain.variant}`} style={{ width: chain.width, minHeight: chain.height }}>
+      <Handle type="target" position={Position.Left} className="handle" />
+      <span className="prog__name">{chain.name}</span>
+      {chain.variant === 'missing' && <span className="prog__note">fuente no aportado</span>}
+      {chain.variant === 'dynamic' && <span className="prog__note">destino dinámico</span>}
+      {chain.variant === 'supplied' && chain.paragraphCount !== undefined && (
+        <span className="prog__note">{chain.paragraphCount} párrafos</span>
+      )}
+      <Handle type="source" position={Position.Right} className="handle" />
     </div>
   )
 }
 
-const nodeTypes = { cobol: CobolNodeView }
+const nodeTypes = { program: ProgramNodeView }
 
-const EDGE_COLOR: Record<string, string> = {
-  perform: '#7aa2f7',
-  goto: '#e0af68',
-  call: '#9ece6a',
-}
-
-export function FlowCanvas({ flow }: { flow: FlowResult }) {
-  const [nodes, setNodes] = useState<CobolNode[]>([])
+export function ChainCanvas({ linked }: { linked: LinkedFlow }) {
+  const [nodes, setNodes] = useState<ProgramNode[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
 
   useEffect(() => {
     let cancelled = false
-    layoutFlow(flow).then(graph => {
+    layoutChain(linked).then(graph => {
       if (cancelled) return
       setNodes(
         graph.nodes.map(n => ({
           id: n.id,
-          type: 'cobol' as const,
+          type: 'program' as const,
           position: { x: n.x, y: n.y },
           // Dimensiones explícitas: ya las calculó elk, así React Flow no
           // tiene que medir el DOM para decidir dónde anclar las aristas.
           width: n.width,
           height: n.height,
-          data: { canvas: n },
+          data: { chain: n },
         })),
       )
       setEdges(
         graph.edges.map(e => {
-          const color = e.toMissing ? '#f7768e' : EDGE_COLOR[e.kind] ?? '#7aa2f7'
+          const color = e.dynamic ? '#bb9af7' : e.resolved ? '#9ece6a' : '#f7768e'
           return {
             id: e.id,
             source: e.source,
@@ -69,8 +65,8 @@ export function FlowCanvas({ flow }: { flow: FlowResult }) {
             type: 'smoothstep',
             style: {
               stroke: color,
-              strokeWidth: 1.6,
-              ...(e.kind === 'call' ? { strokeDasharray: e.dynamic ? '3 3' : '7 4' } : {}),
+              strokeWidth: 1.8,
+              ...(e.dynamic ? { strokeDasharray: '3 3' } : {}),
             },
             labelStyle: { fill: '#c0caf5', fontSize: 11 },
             labelBgStyle: { fill: '#1f2335', fillOpacity: 0.9 },
@@ -84,7 +80,7 @@ export function FlowCanvas({ flow }: { flow: FlowResult }) {
     return () => {
       cancelled = true
     }
-  }, [flow])
+  }, [linked])
 
   return (
     <ReactFlow
@@ -93,14 +89,11 @@ export function FlowCanvas({ flow }: { flow: FlowResult }) {
       nodeTypes={nodeTypes}
       fitView
       minZoom={0.2}
-      nodesDraggable
       nodesConnectable={false}
       edgesFocusable={false}
-      proOptions={{ hideAttribution: false }}
     >
       <Background gap={24} size={1.5} color="#2a2f45" />
       <Controls showInteractive={false} />
-      <MiniMap pannable zoomable className="minimap" />
     </ReactFlow>
   )
 }

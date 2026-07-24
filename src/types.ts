@@ -108,6 +108,38 @@ export interface FlowEdge {
   line: number
 }
 
+// ── Cadena entre programas ──────────────────────────────────────────────
+
+/** Un programa aportado por el usuario, con su flujo interno ya extraído */
+export interface LinkedProgram {
+  /** Nombre con el que se identifica: PROGRAM-ID si existe, si no el del fichero */
+  name: string
+  /** Nombre del fichero tal como lo aportó el usuario */
+  sourceName: string
+  flow: FlowResult
+}
+
+/** Una llamada que cruza la frontera de un programa */
+export interface CrossProgramCall {
+  fromProgram: string
+  fromParagraph: string
+  /** Programa destino, o el nombre de la variable si la llamada es dinámica */
+  toProgram: string
+  /** true si el destino está entre los programas aportados */
+  resolved: boolean
+  /** CALL con variable: el destino real solo se conoce en ejecución */
+  dynamic: boolean
+  line: number
+}
+
+/** Grafo de llamadas entre los programas aportados */
+export interface LinkedFlow {
+  programs: LinkedProgram[]
+  calls: CrossProgramCall[]
+  /** Programas llamados con literal pero no aportados — qué falta por bajar */
+  missingPrograms: string[]
+}
+
 /** Hechos de flujo extraídos de la PROCEDURE DIVISION */
 export interface FlowResult {
   /** PROGRAM-ID si aparece en el fuente */

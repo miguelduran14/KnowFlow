@@ -1,6 +1,6 @@
 import ELK from 'elkjs/lib/elk.bundled.js'
 import type { ElkNode } from 'elkjs/lib/elk.bundled.js'
-import type { FlowEdge, FlowResult } from 'knowflow'
+import type { FlowEdge, FlowResult, LinkedFlow } from 'knowflow'
 
 export type NodeVariant = 'paragraph' | 'section' | 'implicit' | 'call' | 'missing'
 
@@ -48,6 +48,98 @@ function edgeLabel(edge: FlowEdge): string {
 }
 
 const elk = new ELK()
+
+export type ChainVariant = 'supplied' | 'missing' | 'dynamic'
+
+export interface ChainNode {
+  id: string
+  x: number
+  y: number
+  width: number
+  height: number
+  name: string
+  variant: ChainVariant
+  paragraphCount?: number | undefined
+}
+
+export interface ChainEdge {
+  id: string
+  source: string
+  target: string
+  label: string
+  resolved: boolean
+  dynamic: boolean
+}
+
+export interface ChainGraph {
+  nodes: ChainNode[]
+  edges: ChainEdge[]
+}
+
+/**
+ * Posiciona el grafo de llamadas entre programas (izquierda a derecha:
+ * un flujo de llamadas se lee mejor como cadena que como árbol). Proyección
+ * 1:1 del LinkedFlow — los programas no aportados y los destinos dinámicos
+ * aparecen como nodos propios, marcados.
+ */
+export async function layoutChain(linked: LinkedFlow): Promise<ChainGraph> {
+  const nodes = new Map<string, Omit<ChainNode, 'x' | 'y'>>()
+
+  for (const program of linked.programs) {
+    const id = nodeId(program.name)
+    nodes.set(id, {
+      id,
+      name: program.name,
+      variant: 'supplied',
+      paragraphCount: program.flow.paragraphs.length,
+      width: Math.max(170, program.name.length * 9 + 60),
+      height: 58,
+    })
+  }
+
+  for (const call of linked.calls) {
+    const id = nodeId(call.toProgram)
+    if (nodes.has(id)) continue
+    nodes.set(id, {
+      id,
+      name: call.toProgram,
+      variant: call.dynamic ? 'dynamic' : 'missing',
+      width: Math.max(170, call.toProgram.length * 9 + 60),
+      height: 58,
+    })
+  }
+
+  const edges: ChainEdge[] = linked.calls.map((call, i) => ({
+    id: `c${i}`,
+    source: nodeId(call.fromProgram),
+    target: nodeId(call.toProgram),
+    label: call.dynamic ? `CALL dinámica · ${call.fromParagraph}` : `CALL · ${call.fromParagraph}`,
+    resolved: call.resolved,
+    dynamic: call.dynamic,
+  }))
+
+  const graph: ElkNode = {
+    id: 'root',
+    layoutOptions: {
+      'elk.algorithm': 'layered',
+      'elk.direction': 'RIGHT',
+      'elk.spacing.nodeNode': '50',
+      'elk.layered.spacing.nodeNodeBetweenLayers': '110',
+    },
+    children: [...nodes.values()].map(n => ({ id: n.id, width: n.width, height: n.height })),
+    edges: edges.map(e => ({ id: e.id, sources: [e.source], targets: [e.target] })),
+  }
+
+  const laidOut = await elk.layout(graph)
+
+  return {
+    nodes: (laidOut.children ?? []).map(child => {
+      const meta = nodes.get(child.id)!
+      return { ...meta, x: child.x ?? 0, y: child.y ?? 0 }
+    }),
+    edges,
+  }
+}
 
 /**
  * Proyecta un FlowResult del motor a un grafo posicionado con elkjs
