@@ -1,0 +1,56 @@
+{
+  "records": [
+    {
+      "level": 1,
+      "name": "WS-REGISTRO",
+      "type": "group",
+      "lengthInBytes": 14,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "WS-CLAVE",
+          "type": "alphanumeric",
+          "picture": "X(8)",
+          "lengthInBytes": 8,
+          "offset": 0,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "WS-IMPORTE",
+          "type": "packed-decimal",
+          "picture": "S9(7)V99",
+          "usage": "COMP-3",
+          "lengthInBytes": 5,
+          "offset": 8,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "WS-ESTADO",
+          "type": "alphanumeric",
+          "picture": "X(1)",
+          "lengthInBytes": 1,
+          "offset": 13,
+          "children": [],
+          "conditionValues": [
+            {
+              "name": "WS-ACTIVO",
+              "values": [
+                "'A'"
+              ]
+            },
+            {
+              "name": "WS-CERRADO",
+              "values": [
+                "'C'"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "missingCopybooks": []
+}

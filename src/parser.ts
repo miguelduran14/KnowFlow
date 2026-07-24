@@ -279,8 +279,22 @@ function resolveOffsets(fields: SchemaField[], baseOffset: number): { length: nu
  * listado en `missingCopybooks` — nunca se inventa su estructura.
  */
 export function parse(source: string, copybooks: Map<string, string> = new Map()): ParseResult {
-  const rawStatements = joinContinuations(source.split(/\r?\n/))
-  const { statements: resolved, missingCopybooks } = resolveCopies(rawStatements, copybooks)
+  // Si el fuente es un programa completo, la definición de datos termina
+  // donde empieza la PROCEDURE DIVISION — nada de lo que sigue es un campo.
+  const allLines = source.split(/\r?\n/)
+  const procedureIndex = allLines.findIndex(line => {
+    const body = line.length > 6 ? line.slice(6) : line
+    return /^\s*PROCEDURE\s+DIVISION/i.test(body)
+  })
+  const dataLines = procedureIndex === -1 ? allLines : allLines.slice(0, procedureIndex)
+
+  const rawStatements = joinContinuations(dataLines)
+  // Los nombres de member son case-insensitive: el mapa se normaliza a
+  // mayúsculas para que el lookup de resolveCopies siempre encaje.
+  const normalizedCopybooks = new Map(
+    [...copybooks].map(([name, text]) => [name.toUpperCase(), text] as const),
+  )
+  const { statements: resolved, missingCopybooks } = resolveCopies(rawStatements, normalizedCopybooks)
 
   const statements: RawStatement[] = []
   for (const item of resolved) {

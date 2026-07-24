@@ -138,6 +138,258 @@ body,
   color: var(--text-dim);
 }
 
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 12px 0;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 7px 18px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tab--active {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.panel__body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: auto;
+}
+
+.notice--copybook {
+  color: var(--ok);
+  border-color: var(--ok);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip-close {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+  line-height: 1;
+}
+
+/* ── Tabla de esquema ──────────────────────────────────── */
+
+.schema {
+  padding: 14px;
+}
+
+.schema__fidelity {
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.schema__fidelity--verified {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.schema__fidelity--partial {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.explain__badge--verified {
+  color: var(--ok);
+}
+
+.explain__badge--partial {
+  color: var(--warn);
+}
+
+.schema__missing {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--missing);
+  border-radius: 6px;
+  color: var(--missing);
+  font-size: 12px;
+}
+
+.schema table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+}
+
+.schema th {
+  text-align: left;
+  color: var(--text-dim);
+  font-weight: 600;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.schema td {
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cell-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.row--gap td {
+  color: var(--missing);
+  font-style: italic;
+}
+
+.row--unknown td {
+  color: var(--warn);
+}
+
+.row--cond td {
+  color: var(--text-dim);
+  font-size: 11.5px;
+}
+
+.pill {
+  margin-left: 8px;
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.pill--redefines {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pill--warn {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+/* ── Panel de explicación ─────────────────────────────── */
+
+.explain {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 860px;
+}
+
+.explain__config {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.explain__config label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.explain__config input {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 13px;
+  min-width: 230px;
+}
+
+.explain__config input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.explain__config button {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.explain__config button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.explain__byok {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.explain__error {
+  padding: 10px 14px;
+  border: 1px solid var(--missing);
+  border-radius: 6px;
+  color: var(--missing);
+  font-size: 13px;
+}
+
+.explain__result {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.explain__badge {
+  padding: 6px 14px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.explain__result pre {
+  margin: 0;
+  padding: 16px;
+  white-space: pre-wrap;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
 .canvas {
   position: relative;
   min-width: 0;

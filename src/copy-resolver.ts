@@ -71,7 +71,9 @@ export function resolveCopies(
       continue
     }
 
-    const memberName = match[1]!
+    // COBOL es case-insensitive: COPY Customer y COPY CUSTOMER son el
+    // mismo member. Todo el lookup se normaliza a mayúsculas.
+    const memberName = match[1]!.toUpperCase()
     const replacingClause = copyMatch?.[2]
     const memberSource = seen.has(memberName) ? undefined : copybooks.get(memberName)
 
