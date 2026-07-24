@@ -59,10 +59,13 @@ arrastrar ficheros o pegar código/fragmentos.
 1. **Slice 1 (MVP)** — reordenado el 2026-07-23 (ver "Historial de decisiones"):
    - **Cerrado**: resolución de COPY/REPLACING + `EXEC SQL INCLUDE` + data division completa
      (niveles, PIC, OCCURS, REDEFINES, niveles 88, USAGE) → parser con modo degradado y no-invención.
-   - **Siguiente (prioridad actual)**: parser de PROCEDURE DIVISION — párrafos y grafo
-     PERFORM/CALL/GO TO — como capa de hechos verificados para el flujo. Sin esto, la explicación
-     en lenguaje natural de "qué hace el programa" y el diagrama de flujo se apoyarían en que el
-     LLM adivine sobre texto crudo, exactamente el punto débil que este proyecto existe para batir.
+   - **Cerrado**: parser de PROCEDURE DIVISION — párrafos y grafo PERFORM/CALL/GO TO — como capa
+     de hechos verificados para el flujo, con diagrama interactivo y export Mermaid.
+   - **Cerrado**: cadena entre programas — varios fuentes a la vez, resolviendo qué CALL cruza a
+     qué programa; los dinámicos nunca se resuelven y los no aportados se listan.
+   - **Cerrado**: capa LLM BYOK (interfaz agnóstica + adaptador Claude + proveedor falso) y
+     explicación en lenguaje llano construida solo sobre los hechos verificados — el modelo nunca
+     ve el fuente crudo, así que no puede deducir estructura sin verificar.
    - **Pausado, no cancelado**: tabla Markdown exportable del esquema de datos e inventario de
      bloques EXEC SQL/CICS (tablas, cursores, comandos) sin interpretación semántica.
    - La capa LLM (proveedor pluggable) y el paquete de explicación se construyen sobre AMBOS
