@@ -1,0 +1,182 @@
+{
+  "files": [
+    {
+      "name": "CUST-FILE",
+      "assignTo": "CUSTDD",
+      "organization": "INDEXED",
+      "access": "DYNAMIC",
+      "records": [
+        "CUST-REC"
+      ],
+      "operations": [
+        {
+          "verb": "OPEN",
+          "mode": "INPUT",
+          "paragraph": "MAIN-PARA",
+          "line": 31
+        },
+        {
+          "verb": "CLOSE",
+          "paragraph": "MAIN-PARA",
+          "line": 35
+        },
+        {
+          "verb": "READ",
+          "paragraph": "READ-LOOP",
+          "line": 38
+        }
+      ]
+    },
+    {
+      "name": "RPT-FILE",
+      "assignTo": "RPTDD",
+      "organization": "SEQUENTIAL",
+      "records": [
+        "RPT-REC"
+      ],
+      "operations": [
+        {
+          "verb": "OPEN",
+          "mode": "OUTPUT",
+          "paragraph": "MAIN-PARA",
+          "line": 31
+        },
+        {
+          "verb": "CLOSE",
+          "paragraph": "MAIN-PARA",
+          "line": 35
+        },
+        {
+          "verb": "WRITE",
+          "paragraph": "READ-LOOP",
+          "line": 45
+        }
+      ]
+    }
+  ],
+  "unresolvedFileOps": [
+    {
+      "verb": "WRITE",
+      "paragraph": "READ-LOOP",
+      "line": 46,
+      "target": "UNKNOWN-REC"
+    }
+  ],
+  "execs": [
+    {
+      "kind": "sql",
+      "verb": "INCLUDE",
+      "line": 22,
+      "text": "EXEC SQL INCLUDE SQLCA END-EXEC.",
+      "names": []
+    },
+    {
+      "kind": "sql",
+      "verb": "DECLARE",
+      "line": 23,
+      "text": "EXEC SQL DECLARE ORD-CUR CURSOR FOR SELECT ORD-ID, ORD-AMT FROM SCHEMA1.ORDERS WHERE ORD-STATUS = 'O' END-EXEC.",
+      "names": [
+        "SCHEMA1.ORDERS"
+      ],
+      "cursor": "ORD-CUR"
+    },
+    {
+      "kind": "sql",
+      "verb": "OPEN",
+      "paragraph": "MAIN-PARA",
+      "line": 32,
+      "text": "EXEC SQL OPEN ORD-CUR END-EXEC",
+      "names": [],
+      "cursor": "ORD-CUR"
+    },
+    {
+      "kind": "sql",
+      "verb": "CLOSE",
+      "paragraph": "MAIN-PARA",
+      "line": 34,
+      "text": "EXEC SQL CLOSE ORD-CUR END-EXEC",
+      "names": [],
+      "cursor": "ORD-CUR"
+    },
+    {
+      "kind": "sql",
+      "verb": "FETCH",
+      "paragraph": "READ-LOOP",
+      "line": 39,
+      "text": "EXEC SQL FETCH ORD-CUR INTO :WS-ID, :WS-AMT END-EXEC",
+      "names": [],
+      "cursor": "ORD-CUR"
+    },
+    {
+      "kind": "sql",
+      "verb": "UPDATE",
+      "paragraph": "READ-LOOP",
+      "line": 40,
+      "text": "EXEC SQL UPDATE CUSTOMER SET CUS-SEEN = CURRENT DATE WHERE CUS-ID = :WS-ID END-EXEC",
+      "names": [
+        "CUSTOMER"
+      ]
+    },
+    {
+      "kind": "cics",
+      "verb": "SEND",
+      "paragraph": "SCREEN-PARA",
+      "line": 48,
+      "text": "EXEC CICS SEND MAP('MENU1') MAPSET('MENUSET') END-EXEC",
+      "names": [
+        "MAP(MENU1)",
+        "MAPSET(MENUSET)"
+      ]
+    },
+    {
+      "kind": "cics",
+      "verb": "LINK",
+      "paragraph": "SCREEN-PARA",
+      "line": 49,
+      "text": "EXEC CICS LINK PROGRAM('SUBPRG') END-EXEC",
+      "names": [
+        "PROGRAM(SUBPRG)"
+      ]
+    },
+    {
+      "kind": "cics",
+      "verb": "READ",
+      "paragraph": "SCREEN-PARA",
+      "line": 50,
+      "text": "EXEC CICS READ FILE('ACCTFILE') END-EXEC.",
+      "names": [
+        "FILE(ACCTFILE)"
+      ]
+    }
+  ],
+  "tables": [
+    "SCHEMA1.ORDERS",
+    "CUSTOMER"
+  ],
+  "cursors": [
+    {
+      "name": "ORD-CUR",
+      "declared": true,
+      "opened": true,
+      "fetched": true,
+      "closed": true,
+      "tables": [
+        "SCHEMA1.ORDERS"
+      ]
+    }
+  ],
+  "cicsCommands": [
+    {
+      "command": "SEND",
+      "count": 1
+    },
+    {
+      "command": "LINK",
+      "count": 1
+    },
+    {
+      "command": "READ",
+      "count": 1
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import type { FlowResult, ParseResult } from '../types.js'
+import type { Inventory, FlowResult, ParseResult } from '../types.js'
 import { renderFacts } from './facts.js'
 import type { ExplanationProvider } from './provider.js'
 
@@ -22,6 +22,7 @@ FORMATO: Markdown breve — un resumen de qué hace el programa (2-4 frases), el
 export interface ProgramFacts {
   data?: ParseResult | undefined
   flow?: FlowResult | undefined
+  inventory?: Inventory | undefined
 }
 
 /**
@@ -34,7 +35,7 @@ export async function explainProgram(
   facts: ProgramFacts,
   provider: ExplanationProvider,
 ): Promise<string> {
-  const rendered = renderFacts(facts.data, facts.flow)
+  const rendered = renderFacts(facts.data, facts.flow, facts.inventory)
   if (rendered.trim() === '') {
     throw new Error('No hay hechos que explicar: parsea un programa primero')
   }

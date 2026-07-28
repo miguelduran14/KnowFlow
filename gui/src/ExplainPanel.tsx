@@ -17,7 +17,7 @@ export function ExplainPanel({ facts }: { facts: ProgramFacts }) {
   const [error, setError] = useState<string | undefined>()
   const [explanation, setExplanation] = useState<string | undefined>()
 
-  const fidelity = useMemo(() => factsFidelity(facts.data, facts.flow), [facts])
+  const fidelity = useMemo(() => factsFidelity(facts.data, facts.flow, facts.inventory), [facts])
 
   // Una explicación pertenece a los hechos con los que se generó: si el
   // fuente cambia, dejar la anterior en pantalla la convertiría en una

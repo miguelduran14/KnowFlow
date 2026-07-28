@@ -154,6 +154,83 @@ export interface LinkedFlow {
   missingPrograms: string[]
 }
 
+// ── Inventario: qué toca el programa ────────────────────────────────────
+
+export type FileVerb = 'OPEN' | 'CLOSE' | 'READ' | 'WRITE' | 'REWRITE' | 'DELETE' | 'START'
+
+/** Una operación de E/S sobre un fichero, anclada a su línea de fuente */
+export interface FileOperation {
+  verb: FileVerb
+  /** Modo del OPEN tal como aparece (INPUT, OUTPUT, I-O, EXTEND) */
+  mode?: string | undefined
+  /** Párrafo donde aparece la sentencia */
+  paragraph: string
+  line: number
+}
+
+/** Un fichero declarado en FILE-CONTROL con lo que el programa hace con él */
+export interface FileUsage {
+  /** Nombre lógico COBOL (SELECT <nombre>) */
+  name: string
+  /** ASSIGN TO ... — el DD del JCL, si el SELECT lo nombra */
+  assignTo?: string | undefined
+  /** ORGANIZATION IS ... tal cual, sin interpretar */
+  organization?: string | undefined
+  /** ACCESS MODE IS ... tal cual, sin interpretar */
+  access?: string | undefined
+  /** Nombres de registro 01 bajo su FD — cómo se resuelve un WRITE */
+  records: string[]
+  operations: FileOperation[]
+}
+
+/** Bloque EXEC SQL o EXEC CICS, extraído sin interpretación semántica */
+export interface ExecBlock {
+  kind: 'sql' | 'cics'
+  /** SQL: primer verbo (SELECT, DECLARE, FETCH…). CICS: comando (SEND, LINK…) */
+  verb: string
+  /** Párrafo donde aparece; ausente si el bloque está en la DATA DIVISION */
+  paragraph?: string | undefined
+  line: number
+  /** Texto del bloque colapsado a una línea, EXEC/END-EXEC incluidos */
+  text: string
+  /**
+   * SQL: tablas nombradas tras FROM/JOIN/INSERT INTO/UPDATE.
+   * CICS: opciones con valor literal, como `FILE(CUSTFILE)`.
+   */
+  names: string[]
+  /** SQL: cursor nombrado por el bloque (DECLARE/OPEN/FETCH/CLOSE) */
+  cursor?: string | undefined
+}
+
+/** Un cursor DB2 y qué hace el programa con él */
+export interface CursorUsage {
+  name: string
+  /** Aparece un DECLARE ... CURSOR en el fuente aportado */
+  declared: boolean
+  opened: boolean
+  fetched: boolean
+  closed: boolean
+  /** Tablas nombradas en su DECLARE */
+  tables: string[]
+}
+
+/** Respuesta a "¿este programa qué toca?" — ficheros, tablas, CICS */
+export interface Inventory {
+  files: FileUsage[]
+  /**
+   * Operaciones de E/S cuyo fichero no se pudo resolver: el SELECT o el FD
+   * están en un copybook no aportado, o el nombre no aparece en el fuente.
+   * Se listan aparte en vez de asignarlas a un fichero inventado (ADR-0003).
+   */
+  unresolvedFileOps: (FileOperation & { target: string })[]
+  execs: ExecBlock[]
+  /** Tablas DB2 distintas nombradas en algún EXEC SQL, en orden de aparición */
+  tables: string[]
+  cursors: CursorUsage[]
+  /** Comandos CICS distintos con cuántas veces aparecen */
+  cicsCommands: { command: string; count: number }[]
+}
+
 /** Hechos de flujo extraídos de la PROCEDURE DIVISION */
 export interface FlowResult {
   /** PROGRAM-ID si aparece en el fuente */

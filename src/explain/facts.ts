@@ -1,4 +1,4 @@
-import type { FlowResult, ParseResult, SchemaField } from '../types.js'
+import type { Inventory, FlowResult, ParseResult, SchemaField } from '../types.js'
 
 /**
  * Nivel de fidelidad de un conjunto de hechos (ADR-0003). Nivel 3 (solo
@@ -17,6 +17,7 @@ export interface FactsFidelity {
 export function factsFidelity(
   data: ParseResult | undefined,
   flow: FlowResult | undefined,
+  inventory?: Inventory | undefined,
 ): FactsFidelity {
   const reasons: string[] = []
   if (flow?.fragment) reasons.push('fragmento sin PROCEDURE DIVISION')
@@ -27,6 +28,10 @@ export function factsFidelity(
     reasons.push(`destinos no encontrados: ${flow.missingTargets.join(', ')}`)
   }
   if (flow?.edges.some(e => e.dynamic)) reasons.push('hay CALL dinámicas sin destino verificable')
+  if (inventory && inventory.unresolvedFileOps.length > 0) {
+    const targets = [...new Set(inventory.unresolvedFileOps.map(o => o.target))]
+    reasons.push(`operaciones de E/S sin fichero resuelto: ${targets.join(', ')}`)
+  }
   return { level: reasons.length > 0 ? 'partial' : 'verified', reasons }
 }
 
@@ -67,7 +72,11 @@ function renderField(field: SchemaField, depth: number, out: string[]): void {
  * que pueda "deducir" estructura sin verificar: si un hecho no está
  * aquí, no existe para la explicación.
  */
-export function renderFacts(data: ParseResult | undefined, flow: FlowResult | undefined): string {
+export function renderFacts(
+  data: ParseResult | undefined,
+  flow: FlowResult | undefined,
+  inventory?: Inventory | undefined,
+): string {
   const out: string[] = []
 
   // Un flujo aporta hechos solo si tiene aristas o algún párrafo REAL del
@@ -119,9 +128,56 @@ export function renderFacts(data: ParseResult | undefined, flow: FlowResult | un
     }
   }
 
+  const inventoryHasFacts =
+    inventory !== undefined &&
+    (inventory.files.length > 0 || inventory.execs.length > 0 || inventory.unresolvedFileOps.length > 0)
+
+  if (inventory && inventoryHasFacts) {
+    out.push('')
+    out.push('## QUÉ TOCA EL PROGRAMA (verificado por parser)')
+    for (const file of inventory.files) {
+      const decl = [
+        file.assignTo ? `ASSIGN TO ${file.assignTo}` : '',
+        file.organization ? `ORGANIZATION ${file.organization}` : '',
+        file.access ? `ACCESS ${file.access}` : '',
+      ].filter(Boolean)
+      out.push(`- FICHERO ${file.name}${decl.length > 0 ? ' | ' + decl.join(' | ') : ''}`)
+      for (const op of file.operations) {
+        out.push(`  - ${op.verb}${op.mode ? ' ' + op.mode : ''} en ${op.paragraph} (L${op.line})`)
+      }
+      if (file.operations.length === 0) {
+        out.push('  - declarado pero SIN operaciones en el fuente aportado')
+      }
+    }
+    for (const table of inventory.tables) {
+      out.push(`- TABLA DB2 ${table}`)
+    }
+    for (const cursor of inventory.cursors) {
+      const ops = [
+        cursor.declared ? 'DECLARE' : '',
+        cursor.opened ? 'OPEN' : '',
+        cursor.fetched ? 'FETCH' : '',
+        cursor.closed ? 'CLOSE' : '',
+      ].filter(Boolean)
+      out.push(
+        `- CURSOR ${cursor.name}: ${ops.join(', ') || 'nombrado sin operaciones reconocidas'}` +
+          (cursor.tables.length > 0 ? ` sobre ${cursor.tables.join(', ')}` : ''),
+      )
+    }
+    for (const cics of inventory.cicsCommands) {
+      out.push(`- CICS ${cics.command} × ${cics.count}`)
+    }
+    if (inventory.execs.length > 0) {
+      out.push('Bloques EXEC en orden de fuente (texto literal, sin interpretar):')
+      for (const exec of inventory.execs) {
+        out.push(`  - L${exec.line}${exec.paragraph ? ` (${exec.paragraph})` : ''}: ${exec.text}`)
+      }
+    }
+  }
+
   // Sin ningún hecho no hay nada que acotar: devolver solo la sección de
   // límites daría un documento que parece analizable pero está vacío.
-  if (!flowHasFacts && !dataHasFacts) return ''
+  if (!flowHasFacts && !dataHasFacts && !inventoryHasFacts) return ''
 
   const gaps: string[] = []
   if (flow?.fragment) {
@@ -137,6 +193,11 @@ export function renderFacts(data: ParseResult | undefined, flow: FlowResult | un
     if (edge.dynamic) {
       gaps.push(`CALL dinámica en L${edge.line}: el programa destino (${edge.to}) es una variable.`)
     }
+  }
+  for (const op of inventory?.unresolvedFileOps ?? []) {
+    gaps.push(
+      `${op.verb} ${op.target} en L${op.line}: no hay SELECT ni FD que diga a qué fichero corresponde.`,
+    )
   }
   if (gaps.length > 0) {
     out.push('')

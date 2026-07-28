@@ -60,14 +60,17 @@ arrastrar ficheros o pegar código/fragmentos.
    - **Cerrado**: resolución de COPY/REPLACING + `EXEC SQL INCLUDE` + data division completa
      (niveles, PIC, OCCURS, REDEFINES, niveles 88, USAGE) → parser con modo degradado y no-invención.
    - **Cerrado**: parser de PROCEDURE DIVISION — párrafos y grafo PERFORM/CALL/GO TO — como capa
-     de hechos verificados para el flujo, con diagrama interactivo y export Mermaid.
+     de hechos verificados para el flujo, con diagrama interactivo y export Mermaid. Cada arista
+     lleva las condiciones IF/EVALUATE bajo las que ocurre (`guards`), en texto crudo del fuente.
    - **Cerrado**: cadena entre programas — varios fuentes a la vez, resolviendo qué CALL cruza a
      qué programa; los dinámicos nunca se resuelven y los no aportados se listan.
    - **Cerrado**: capa LLM BYOK (interfaz agnóstica + adaptador Claude + proveedor falso) y
      explicación en lenguaje llano construida solo sobre los hechos verificados — el modelo nunca
      ve el fuente crudo, así que no puede deducir estructura sin verificar.
-   - **Pausado, no cancelado**: tabla Markdown exportable del esquema de datos e inventario de
-     bloques EXEC SQL/CICS (tablas, cursores, comandos) sin interpretación semántica.
+   - **Cerrado**: inventario de "qué toca el programa" — ficheros con su DD y sus operaciones,
+     tablas DB2, cursores y comandos CICS, por extracción literal sin interpretación semántica.
+     Lo que no se puede resolver contra el fuente aportado (un WRITE sin FD) se lista aparte.
+   - **Pausado, no cancelado**: tabla Markdown exportable del esquema de datos.
    - La capa LLM (proveedor pluggable) y el paquete de explicación se construyen sobre AMBOS
      hechos —esquema de datos y grafo de flujo— para que el resumen en lenguaje llano y el
      diagrama de flujo sean fiables, no una narración libre del modelo.

@@ -4,48 +4,93 @@ import {
   linkedFlowToMermaid,
   parse,
   parseFlow,
+  parseInventory,
   type FlowResult,
+  type Inventory,
   type ParseResult,
 } from 'knowflow'
 import { useCallback, useMemo, useState, type DragEvent } from 'react'
 import { ChainCanvas } from './ChainCanvas.js'
 import { ExplainPanel } from './ExplainPanel.js'
 import { FlowCanvas } from './FlowCanvas.js'
+import { InventoryPanel } from './InventoryPanel.js'
 import { SchemaTable } from './SchemaTable.js'
 
 const SAMPLE = `      * Programa sintético de ejemplo (no es código real de nadie).
        IDENTIFICATION DIVISION.
        PROGRAM-ID. DEMOFLOW.
+       ENVIRONMENT DIVISION.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT MOV-FILE ASSIGN TO MOVDD
+               ORGANIZATION IS SEQUENTIAL.
+           SELECT RPT-FILE ASSIGN TO RPTDD.
        DATA DIVISION.
+       FILE SECTION.
+       FD  MOV-FILE.
+       01  MOV-REC            PIC X(120).
+       FD  RPT-FILE.
+       01  RPT-REC            PIC X(133).
        WORKING-STORAGE SECTION.
+           EXEC SQL INCLUDE SQLCA END-EXEC.
+           EXEC SQL
+               DECLARE CLI-CUR CURSOR FOR
+                   SELECT CLI_ID, CLI_SALDO
+                     FROM CLIENTES
+                    WHERE CLI_ESTADO = 'A'
+           END-EXEC.
        01 WS-REGISTRO.
          05 WS-CLAVE          PIC X(8).
          05 WS-IMPORTE        PIC S9(7)V99 COMP-3.
+         05 WS-IMPORTE-ED     PIC ZZ,ZZ9.99.
          05 WS-ESTADO         PIC X(1).
            88 WS-ACTIVO         VALUE 'A'.
            88 WS-CERRADO        VALUE 'C'.
        PROCEDURE DIVISION.
        MAIN-PARA.
+           OPEN INPUT MOV-FILE OUTPUT RPT-FILE
            PERFORM INIT-PARA
            PERFORM PROCESS-PARA UNTIL WS-EOF = 'Y'
            PERFORM REPORT-PARA
+           CLOSE MOV-FILE RPT-FILE
            STOP RUN.
        INIT-PARA.
-           MOVE 0 TO WS-COUNT.
+           MOVE 0 TO WS-COUNT
+           EXEC SQL OPEN CLI-CUR END-EXEC.
        PROCESS-PARA.
            PERFORM READ-NEXT-PARA
-           CALL 'VALIDMOD' USING WS-REGISTRO
+           EVALUATE WS-ESTADO
+               WHEN 'A'
+                   CALL 'VALIDMOD' USING WS-REGISTRO
+               WHEN 'C'
+               WHEN 'X'
+                   PERFORM CIERRE-PARA
+               WHEN OTHER
+                   PERFORM ERROR-PARA
+           END-EVALUATE
            ADD 1 TO WS-COUNT.
        READ-NEXT-PARA.
-           DISPLAY 'READ'.
+           READ MOV-FILE
+           EXEC SQL FETCH CLI-CUR INTO :WS-ID, :WS-SALDO END-EXEC.
+       CIERRE-PARA.
+           IF WS-IMPORTE > 0
+               EXEC SQL
+                   UPDATE CLIENTES
+                      SET CLI_SALDO = :WS-SALDO
+                    WHERE CLI_ID = :WS-ID
+               END-EXEC
+           END-IF.
+       ERROR-PARA.
+           DISPLAY 'ESTADO NO ESPERADO'.
        REPORT-PARA.
+           WRITE RPT-REC
            CALL WS-REPORT-PROG
            DISPLAY 'DONE'.
 `
 
 const MAIN_SOURCE = 'programa pegado'
 
-type Tab = 'flow' | 'chain' | 'data' | 'explain'
+type Tab = 'flow' | 'chain' | 'data' | 'inventory' | 'explain'
 
 export function App() {
   const [source, setSource] = useState('')
@@ -63,9 +108,14 @@ export function App() {
     [source, copybooks],
   )
 
+  const inventory: Inventory | undefined = useMemo(
+    () => (source.trim() === '' ? undefined : parseInventory(source)),
+    [source],
+  )
+
   // Identidad estable mientras los hechos no cambien: ExplainPanel la usa
   // para descartar una explicación que ya no corresponde al fuente.
-  const facts = useMemo(() => ({ data, flow }), [data, flow])
+  const facts = useMemo(() => ({ data, flow, inventory }), [data, flow, inventory])
 
   const linked = useMemo(() => {
     if (source.trim() === '') return undefined
@@ -206,6 +256,12 @@ export function App() {
               Datos
             </button>
             <button
+              className={tab === 'inventory' ? 'tab tab--active' : 'tab'}
+              onClick={() => setTab('inventory')}
+            >
+              Qué toca
+            </button>
+            <button
               className={tab === 'explain' ? 'tab tab--active' : 'tab'}
               onClick={() => setTab('explain')}
             >
@@ -253,6 +309,10 @@ export function App() {
             ) : tab === 'data' ? (
               data ? (
                 <SchemaTable data={data} />
+              ) : null
+            ) : tab === 'inventory' ? (
+              inventory ? (
+                <InventoryPanel inventory={inventory} />
               ) : null
             ) : (
               <ExplainPanel facts={facts} />
