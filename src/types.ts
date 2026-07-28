@@ -110,6 +110,14 @@ export interface FlowEdge {
   condition?: string | undefined
   /** CALL con variable: el programa destino no es verificable en el fuente */
   dynamic?: boolean | undefined
+  /**
+   * Condiciones IF/EVALUATE abiertas en el punto de la sentencia, de la más
+   * externa a la más interna — la sentencia solo se ejecuta si TODAS se
+   * cumplen. Texto crudo del fuente ("WS-TIPO = 'A'", "NOT (WS-FIN)"),
+   * sin interpretar: el parser dice bajo qué condición ocurre la arista,
+   * no qué significa. Ausente = la sentencia es incondicional.
+   */
+  guards?: string[] | undefined
   /** Línea del fuente (1-based) donde aparece la sentencia — trazabilidad */
   line: number
 }

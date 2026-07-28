@@ -25,6 +25,8 @@ export interface CanvasEdge {
   kind: FlowEdge['kind']
   dynamic: boolean
   toMissing: boolean
+  /** La arista está dentro de una rama IF/EVALUATE: no siempre se recorre */
+  guarded: boolean
 }
 
 export interface CanvasGraph {
@@ -38,13 +40,18 @@ function nodeId(name: string): string {
 }
 
 function edgeLabel(edge: FlowEdge): string {
-  if (edge.kind === 'call') return edge.dynamic ? 'CALL dinámica' : 'CALL'
-  if (edge.kind === 'goto') return edge.condition ? `GO TO ${edge.condition}` : 'GO TO'
-  let label = 'PERFORM'
-  if (edge.thru) label += ` THRU ${edge.thru}`
-  if (edge.times !== undefined) label += ` ${edge.times} TIMES`
-  if (edge.condition) label += ` ${edge.condition}`
-  return label
+  const base = (): string => {
+    if (edge.kind === 'call') return edge.dynamic ? 'CALL dinámica' : 'CALL'
+    if (edge.kind === 'goto') return edge.condition ? `GO TO ${edge.condition}` : 'GO TO'
+    let label = 'PERFORM'
+    if (edge.thru) label += ` THRU ${edge.thru}`
+    if (edge.times !== undefined) label += ` ${edge.times} TIMES`
+    if (edge.condition) label += ` ${edge.condition}`
+    return label
+  }
+  // Mismo formato que el export Mermaid del motor: la guarda IF/EVALUATE
+  // delante entre corchetes, porque es lo primero que hay que saber.
+  return edge.guards ? `[${edge.guards.join(' AND ')}] ${base()}` : base()
 }
 
 const elk = new ELK()
@@ -189,6 +196,7 @@ export async function layoutFlow(flow: FlowResult): Promise<CanvasGraph> {
     kind: edge.kind,
     dynamic: edge.dynamic === true,
     toMissing: missing.has(nodeId(edge.to)),
+    guarded: edge.guards !== undefined && edge.guards.length > 0,
   }))
 
   const graph: ElkNode = {

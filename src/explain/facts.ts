@@ -97,6 +97,9 @@ export function renderFacts(data: ParseResult | undefined, flow: FlowResult | un
           edge.thru ? `THRU ${edge.thru}` : '',
           edge.times !== undefined ? `${edge.times} TIMES` : '',
           edge.condition ?? '',
+          // Sin la guarda, el modelo leería una arista condicional como
+          // incondicional y explicaría un flujo que el programa no tiene.
+          edge.guards ? `[solo si ${edge.guards.join(' AND ')}]` : '',
           edge.dynamic ? '[dinámica: destino real solo se conoce en ejecución]' : '',
         ].filter(Boolean)
         out.push(

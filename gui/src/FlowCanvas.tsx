@@ -60,7 +60,10 @@ export function FlowCanvas({ flow }: { flow: FlowResult }) {
       )
       setEdges(
         graph.edges.map(e => {
-          const color = e.toMissing ? '#f7768e' : EDGE_COLOR[e.kind] ?? '#7aa2f7'
+          // Las aristas condicionales se pintan en el color de la rama y
+          // más finas: de un vistazo se distingue el camino que siempre se
+          // recorre del que depende de un IF/EVALUATE.
+          const color = e.toMissing ? '#f7768e' : e.guarded ? '#bb9af7' : EDGE_COLOR[e.kind] ?? '#7aa2f7'
           return {
             id: e.id,
             source: e.source,
@@ -69,10 +72,10 @@ export function FlowCanvas({ flow }: { flow: FlowResult }) {
             type: 'smoothstep',
             style: {
               stroke: color,
-              strokeWidth: 1.6,
+              strokeWidth: e.guarded ? 1.2 : 1.6,
               ...(e.kind === 'call' ? { strokeDasharray: e.dynamic ? '3 3' : '7 4' } : {}),
             },
-            labelStyle: { fill: '#c0caf5', fontSize: 11 },
+            labelStyle: { fill: e.guarded ? '#bb9af7' : '#c0caf5', fontSize: 11 },
             labelBgStyle: { fill: '#1f2335', fillOpacity: 0.9 },
             labelBgPadding: [6, 3] as [number, number],
             labelBgBorderRadius: 4,

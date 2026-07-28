@@ -13,13 +13,19 @@ function escapeLabel(text: string): string {
 }
 
 function edgeLabel(edge: FlowEdge): string {
-  if (edge.kind === 'call') return edge.dynamic ? 'CALL dinámica' : 'CALL'
-  if (edge.kind === 'goto') return edge.condition ? `GO TO ${edge.condition}` : 'GO TO'
-  let label = 'PERFORM'
-  if (edge.thru) label += ` THRU ${edge.thru}`
-  if (edge.times !== undefined) label += ` ${edge.times} TIMES`
-  if (edge.condition) label += ` ${edge.condition}`
-  return label
+  const base = (): string => {
+    if (edge.kind === 'call') return edge.dynamic ? 'CALL dinámica' : 'CALL'
+    if (edge.kind === 'goto') return edge.condition ? `GO TO ${edge.condition}` : 'GO TO'
+    let label = 'PERFORM'
+    if (edge.thru) label += ` THRU ${edge.thru}`
+    if (edge.times !== undefined) label += ` ${edge.times} TIMES`
+    if (edge.condition) label += ` ${edge.condition}`
+    return label
+  }
+  // Las guardas IF/EVALUATE van delante entre corchetes: lo primero que
+  // hay que saber de una arista condicional es cuándo ocurre, no qué verbo
+  // la produce. Anidadas se unen con AND, que es lo que significan.
+  return edge.guards ? `[${edge.guards.join(' AND ')}] ${base()}` : base()
 }
 
 /**

@@ -25,7 +25,10 @@
       "from": "MAIN",
       "to": "APPLY-PARA",
       "kind": "perform",
-      "line": 5
+      "line": 5,
+      "guards": [
+        "WS-OK = 'Y'"
+      ]
     }
   ],
   "missingTargets": [],

@@ -1,0 +1,122 @@
+{
+  "programId": "CONDPRG",
+  "paragraphs": [
+    {
+      "name": "MAIN-PARA",
+      "kind": "paragraph"
+    },
+    {
+      "name": "INIT-PARA",
+      "kind": "paragraph"
+    },
+    {
+      "name": "PATH-A",
+      "kind": "paragraph"
+    },
+    {
+      "name": "PATH-B",
+      "kind": "paragraph"
+    },
+    {
+      "name": "DO-A",
+      "kind": "paragraph"
+    },
+    {
+      "name": "DO-BC",
+      "kind": "paragraph"
+    },
+    {
+      "name": "DO-REST",
+      "kind": "paragraph"
+    },
+    {
+      "name": "MID-PARA",
+      "kind": "paragraph"
+    },
+    {
+      "name": "CLOSE-PARA",
+      "kind": "paragraph",
+      "terminates": true
+    }
+  ],
+  "edges": [
+    {
+      "from": "MAIN-PARA",
+      "to": "INIT-PARA",
+      "kind": "perform",
+      "line": 8
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "PATH-A",
+      "kind": "perform",
+      "line": 10,
+      "guards": [
+        "WS-FLAG = 'Y'"
+      ]
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "PATH-B",
+      "kind": "perform",
+      "line": 12,
+      "guards": [
+        "NOT (WS-FLAG = 'Y')"
+      ]
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "DO-A",
+      "kind": "perform",
+      "line": 16,
+      "guards": [
+        "WS-TIPO = 'A'"
+      ]
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "DO-BC",
+      "kind": "perform",
+      "line": 19,
+      "guards": [
+        "WS-TIPO = 'B' OR WS-TIPO = 'C'"
+      ]
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "DO-REST",
+      "kind": "perform",
+      "line": 21,
+      "guards": [
+        "WHEN OTHER"
+      ]
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "CLOSE-PARA",
+      "kind": "perform",
+      "line": 23
+    },
+    {
+      "from": "INIT-PARA",
+      "to": "SUBPRG",
+      "kind": "call",
+      "line": 28,
+      "guards": [
+        "WS-COUNT > 0 AND WS-READY = 'Y'",
+        "WS-DEEP = 1"
+      ]
+    },
+    {
+      "from": "INIT-PARA",
+      "to": "MID-PARA",
+      "kind": "perform",
+      "line": 30,
+      "guards": [
+        "WS-COUNT > 0 AND WS-READY = 'Y'"
+      ]
+    }
+  ],
+  "missingTargets": [],
+  "fragment": false
+}
