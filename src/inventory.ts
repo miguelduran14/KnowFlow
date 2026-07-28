@@ -39,6 +39,11 @@ const OPEN_RE = /(?<![\w-])OPEN(?![\w-])([^.]*)/i
 const CLOSE_RE = /(?<![\w-])CLOSE(?![\w-])([^.]*)/i
 const SINGLE_IO_RE = /(?<![\w-])(READ|WRITE|REWRITE|DELETE|START)\s+([A-Za-z][\w-]*)/gi
 const OPEN_MODES = new Set(['INPUT', 'OUTPUT', 'I-O', 'EXTEND'])
+// Verbos y palabras de control con los que puede empezar una sentencia:
+// si una línea arranca por uno de ellos, ya no es continuación del
+// OPEN/CLOSE anterior.
+const STATEMENT_START_RE =
+  /^\s*(OPEN|CLOSE|READ|WRITE|REWRITE|DELETE|START|MOVE|PERFORM|IF|ELSE|END-IF|EVALUATE|WHEN|END-EVALUATE|CALL|GO|DISPLAY|ACCEPT|ADD|SUBTRACT|MULTIPLY|DIVIDE|COMPUTE|EXEC|STOP|GOBACK|EXIT|SET|INITIALIZE|STRING|UNSTRING|INSPECT|SEARCH|SORT|RETURN|RELEASE|CANCEL|CONTINUE|UNLOCK)(?![\w-])/i
 // Palabras que pueden seguir al nombre en un OPEN/CLOSE sin ser ficheros
 const IO_NOISE = new Set(['WITH', 'NO', 'REWIND', 'LOCK', 'FOR', 'REMOVAL', 'UNIT', 'REEL'])
 
@@ -146,8 +151,14 @@ function collectSelects(lines: SourceLine[]): FileUsage[] {
       inFileControl = false
       continue
     }
-    buffer += ' ' + masked
-    if (/\./.test(masked)) flush()
+    // Un SELECT termina en su punto, esté donde esté: partir la línea por
+    // puntos permite tanto un SELECT repartido en varias líneas como dos
+    // SELECT en la misma.
+    const segments = masked.split('.')
+    for (let i = 0; i < segments.length; i++) {
+      buffer += ' ' + segments[i]!
+      if (i < segments.length - 1) flush()
+    }
   }
   flush()
 
@@ -208,6 +219,9 @@ export function parseInventory(source: string): Inventory {
 
   let inProcedure = false
   let paragraph: string | undefined
+  // OPEN/CLOSE cuya lista de ficheros sigue abierta en la línea siguiente
+  let pendingIo: 'OPEN' | 'CLOSE' | undefined
+  let pendingMode: string | undefined
   // Un bloque EXEC abierto acumula líneas hasta su END-EXEC. Se guardan
   // las dos versiones: la enmascarada para reconocer verbos y tablas (un
   // "FROM T" dentro de un literal no es una tabla) y la original para el
@@ -245,10 +259,14 @@ export function parseInventory(source: string): Inventory {
     const execStart = EXEC_START_RE.exec(masked)
     if (execStart) {
       const kind = execStart[1]!.toUpperCase() === 'SQL' ? 'sql' : 'cics'
+      // Un EXEC en la DATA DIVISION no tiene párrafo; uno en la PROCEDURE
+      // siempre lo tiene, aunque aparezca antes del primer párrafo
+      // declarado (mismo nodo de entrada sintético que usa el flujo).
+      const where = inProcedure ? paragraph ?? 'MAIN' : undefined
       if (END_EXEC_RE.test(masked)) {
-        execs.push(buildExec(kind, collapse([masked]), collapse([body]), line, paragraph))
+        execs.push(buildExec(kind, collapse([masked]), collapse([body]), line, where))
       } else {
-        openExec = { kind, line, parts: [masked.trim()], raw: [body.trim()], paragraph }
+        openExec = { kind, line, parts: [masked.trim()], raw: [body.trim()], paragraph: where }
       }
       continue
     }
@@ -261,29 +279,52 @@ export function parseInventory(source: string): Inventory {
       continue
     }
     if (paragraph === undefined) paragraph = 'MAIN'
+    const owner = paragraph
 
-    const open = OPEN_RE.exec(masked)
-    if (open) {
-      let mode: string | undefined
-      for (const token of open[1]!.trim().split(/\s+/)) {
+    /** Consume la lista de ficheros de un OPEN/CLOSE, actualizando el modo */
+    const takeFileList = (verb: 'OPEN' | 'CLOSE', text: string): void => {
+      for (const token of text.trim().split(/\s+/)) {
         const upper = token.toUpperCase()
         if (upper === '') continue
-        if (OPEN_MODES.has(upper)) {
-          mode = upper
+        if (verb === 'OPEN' && OPEN_MODES.has(upper)) {
+          pendingMode = upper
           continue
         }
         if (IO_NOISE.has(upper)) continue
-        record(upper, { verb: 'OPEN', ...(mode ? { mode } : {}), paragraph, line })
+        record(upper, {
+          verb,
+          ...(verb === 'OPEN' && pendingMode ? { mode: pendingMode } : {}),
+          paragraph: owner,
+          line,
+        })
       }
+    }
+
+    // Un OPEN/CLOSE con varios ficheros suele repartirse en varias líneas
+    // ("OPEN INPUT CUST-FILE" / "OUTPUT RPT-FILE"). La continuación se
+    // reconoce por descarte: mientras no empiece otro verbo, sigue siendo
+    // la lista del OPEN/CLOSE anterior, hasta el punto que lo cierra.
+    if (pendingIo) {
+      if (STATEMENT_START_RE.test(masked)) {
+        pendingIo = undefined
+      } else {
+        takeFileList(pendingIo, masked.split('.')[0]!)
+        if (masked.includes('.')) pendingIo = undefined
+        continue
+      }
+    }
+
+    const open = OPEN_RE.exec(masked)
+    if (open) {
+      pendingMode = undefined
+      takeFileList('OPEN', open[1]!)
+      pendingIo = masked.includes('.') ? undefined : 'OPEN'
     }
 
     const close = CLOSE_RE.exec(masked)
     if (close) {
-      for (const token of close[1]!.trim().split(/\s+/)) {
-        const upper = token.toUpperCase()
-        if (upper === '' || IO_NOISE.has(upper)) continue
-        record(upper, { verb: 'CLOSE', paragraph, line })
-      }
+      takeFileList('CLOSE', close[1]!)
+      pendingIo = masked.includes('.') ? undefined : 'CLOSE'
     }
 
     for (const m of masked.matchAll(SINGLE_IO_RE)) {

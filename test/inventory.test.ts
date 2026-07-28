@@ -76,6 +76,44 @@ describe('inventario: honestidad de lo no resuelto', () => {
     expect(inv.tables).toEqual(['CUSTOMER', 'AUDIT_LOG'])
   })
 
+  it('un OPEN repartido en varias líneas recoge todos sus ficheros y modos', () => {
+    const inv = parseInventory(
+      [
+        '       ENVIRONMENT DIVISION.',
+        '       INPUT-OUTPUT SECTION.',
+        '       FILE-CONTROL.',
+        '           SELECT F-IN  ASSIGN TO INDD.',
+        '           SELECT F-OUT ASSIGN TO OUTDD.',
+        '           SELECT F-UPD ASSIGN TO UPDDD.',
+        '       PROCEDURE DIVISION.',
+        '       MAIN-PARA.',
+        '           OPEN INPUT  F-IN',
+        '                OUTPUT F-OUT',
+        '                I-O    F-UPD',
+        '           PERFORM ALGO.',
+      ].join('\n'),
+    )
+    expect(inv.files.map(f => [f.name, f.operations[0]?.mode])).toEqual([
+      ['F-IN', 'INPUT'],
+      ['F-OUT', 'OUTPUT'],
+      ['F-UPD', 'I-O'],
+    ])
+    // El PERFORM corta la continuación: no se traga "ALGO" como fichero.
+    expect(inv.unresolvedFileOps).toEqual([])
+  })
+
+  it('dos SELECT en la misma línea se leen los dos', () => {
+    const inv = parseInventory(
+      [
+        '       ENVIRONMENT DIVISION.',
+        '       INPUT-OUTPUT SECTION.',
+        '       FILE-CONTROL.',
+        '           SELECT F-A ASSIGN TO ADD1. SELECT F-B ASSIGN TO BDD.',
+      ].join('\n'),
+    )
+    expect(inv.files.map(f => `${f.name}:${f.assignTo}`)).toEqual(['F-A:ADD1', 'F-B:BDD'])
+  })
+
   it('los verbos de E/S dentro de un EXEC CICS no son E/S de fichero COBOL', () => {
     const inv = parseInventory(
       [
