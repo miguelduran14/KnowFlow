@@ -18,7 +18,12 @@ function FieldRows({ field, depth }: { field: SchemaField; depth: number }) {
           )}
         </td>
         <td>{isGap ? '—' : String(field.level).padStart(2, '0')}</td>
-        <td>{isGap ? 'no disponible' : field.type === 'group' ? 'grupo' : field.picture ?? field.type}</td>
+        <td>
+          {isGap ? 'no disponible' : field.type === 'group' ? 'grupo' : field.picture ?? field.type}
+          {/* Un PIC editado ocupa bytes de presentación: con la PIC delante
+              no siempre se ve que ZZ,ZZ9.99 no es un campo de cálculo. */}
+          {field.type === 'numeric-edited' && <span className="pill">editado</span>}
+        </td>
         <td>{field.usage ?? ''}</td>
         <td className="cell-num">{isGap ? '?' : field.lengthInBytes}</td>
         <td className="cell-num">{isGap || field.offsetUnknown ? '?' : field.offset}</td>

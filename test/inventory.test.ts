@@ -102,6 +102,29 @@ describe('inventario: honestidad de lo no resuelto', () => {
     expect(inv.unresolvedFileOps).toEqual([])
   })
 
+  it('una sentencia antes del primer párrafo se marca como entrada implícita', () => {
+    const inv = parseInventory(
+      [
+        '       IDENTIFICATION DIVISION.',
+        '       PROGRAM-ID. INVPRG.',
+        '       ENVIRONMENT DIVISION.',
+        '       INPUT-OUTPUT SECTION.',
+        '       FILE-CONTROL.',
+        '           SELECT F-IN ASSIGN TO INDD.',
+        '       PROCEDURE DIVISION.',
+        '           OPEN INPUT F-IN.',
+        '       MAIN-PARA.',
+        '           CLOSE F-IN.',
+      ].join('\n'),
+    )
+    // El nombre es el mismo nodo sintético que usa el flujo (PROGRAM-ID),
+    // y va marcado: no es un párrafo que exista en el fuente.
+    expect(inv.files[0]?.operations).toEqual([
+      { verb: 'OPEN', mode: 'INPUT', paragraph: 'INVPRG', paragraphImplicit: true, line: 8 },
+      { verb: 'CLOSE', paragraph: 'MAIN-PARA', line: 10 },
+    ])
+  })
+
   it('dos SELECT en la misma línea se leen los dos', () => {
     const inv = parseInventory(
       [
@@ -124,6 +147,7 @@ describe('inventario: honestidad de lo no resuelto', () => {
     )
     expect(inv.unresolvedFileOps).toEqual([])
     expect(inv.cicsCommands).toEqual([{ command: 'READ', count: 1 }])
-    expect(inv.execs[0]?.names).toEqual(['FILE(ACCTFILE)'])
+    expect(inv.execs[0]?.options).toEqual(['FILE(ACCTFILE)'])
+    expect(inv.execs[0]?.tables).toEqual([])
   })
 })

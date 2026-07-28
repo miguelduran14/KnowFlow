@@ -68,16 +68,18 @@
       "verb": "INCLUDE",
       "line": 22,
       "text": "EXEC SQL INCLUDE SQLCA END-EXEC.",
-      "names": []
+      "tables": [],
+      "options": []
     },
     {
       "kind": "sql",
       "verb": "DECLARE",
       "line": 23,
       "text": "EXEC SQL DECLARE ORD-CUR CURSOR FOR SELECT ORD-ID, ORD-AMT FROM SCHEMA1.ORDERS WHERE ORD-STATUS = 'O' END-EXEC.",
-      "names": [
+      "tables": [
         "SCHEMA1.ORDERS"
       ],
+      "options": [],
       "cursor": "ORD-CUR"
     },
     {
@@ -86,7 +88,8 @@
       "paragraph": "MAIN-PARA",
       "line": 32,
       "text": "EXEC SQL OPEN ORD-CUR END-EXEC",
-      "names": [],
+      "tables": [],
+      "options": [],
       "cursor": "ORD-CUR"
     },
     {
@@ -95,7 +98,8 @@
       "paragraph": "MAIN-PARA",
       "line": 34,
       "text": "EXEC SQL CLOSE ORD-CUR END-EXEC",
-      "names": [],
+      "tables": [],
+      "options": [],
       "cursor": "ORD-CUR"
     },
     {
@@ -104,7 +108,8 @@
       "paragraph": "READ-LOOP",
       "line": 39,
       "text": "EXEC SQL FETCH ORD-CUR INTO :WS-ID, :WS-AMT END-EXEC",
-      "names": [],
+      "tables": [],
+      "options": [],
       "cursor": "ORD-CUR"
     },
     {
@@ -113,9 +118,10 @@
       "paragraph": "READ-LOOP",
       "line": 40,
       "text": "EXEC SQL UPDATE CUSTOMER SET CUS-SEEN = CURRENT DATE WHERE CUS-ID = :WS-ID END-EXEC",
-      "names": [
+      "tables": [
         "CUSTOMER"
-      ]
+      ],
+      "options": []
     },
     {
       "kind": "cics",
@@ -123,7 +129,8 @@
       "paragraph": "SCREEN-PARA",
       "line": 48,
       "text": "EXEC CICS SEND MAP('MENU1') MAPSET('MENUSET') END-EXEC",
-      "names": [
+      "tables": [],
+      "options": [
         "MAP(MENU1)",
         "MAPSET(MENUSET)"
       ]
@@ -134,7 +141,8 @@
       "paragraph": "SCREEN-PARA",
       "line": 49,
       "text": "EXEC CICS LINK PROGRAM('SUBPRG') END-EXEC",
-      "names": [
+      "tables": [],
+      "options": [
         "PROGRAM(SUBPRG)"
       ]
     },
@@ -144,7 +152,8 @@
       "paragraph": "SCREEN-PARA",
       "line": 50,
       "text": "EXEC CICS READ FILE('ACCTFILE') END-EXEC.",
-      "names": [
+      "tables": [],
+      "options": [
         "FILE(ACCTFILE)"
       ]
     }

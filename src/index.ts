@@ -1,7 +1,7 @@
 export { parse } from './parser.js'
 export { parseFlow } from './flow-parser.js'
 export { parseInventory } from './inventory.js'
-export { flowToMermaid, linkedFlowToMermaid } from './mermaid.js'
+export { flowEdgeLabel, flowToMermaid, linkedFlowToMermaid } from './mermaid.js'
 export { linkPrograms } from './linker.js'
 export { explainProgram, SYSTEM_PROMPT, type ProgramFacts } from './explain/explain.js'
 export { factsFidelity, renderFacts, type FactsFidelity } from './explain/facts.js'

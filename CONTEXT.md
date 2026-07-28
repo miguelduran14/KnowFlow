@@ -133,6 +133,19 @@ futuro no está regalado. La marca/nombre se conserva. Ver ADR-0004.
 Las decisiones cerradas el 2026-07-14 (sesión de grilling) están registradas como ADRs en
 `docs/adr/`. Ante una decisión abierta, pregunta — no la cierres por tu cuenta (`AGENTS.md`).
 
+**2026-07-28 — el inventario incluye E/S de ficheros, y las aristas de flujo llevan guarda.**
+El spec del grilling solo pedía "inventario de bloques EXEC SQL/CICS". Al construirlo se amplía a
+los **ficheros** (SELECT/ASSIGN + OPEN/READ/WRITE/CLOSE, con los registros del FD para resolver un
+WRITE): responde a la misma pregunta de onboarding ("¿este programa qué toca?") y sin ella la
+respuesta queda coja en un batch, que es el caso típico del usuario real. Sigue siendo extracción
+literal — nada de interpretar qué hace una consulta. En paralelo, el grafo de flujo pasa a marcar
+bajo qué condiciones IF/EVALUATE ocurre cada arista (`guards`, texto crudo del fuente) en vez de
+crear nodos de decisión, que serían estructura que el fuente no declara.
+*Pendiente de ratificar por el autor:* (a) esta ampliación del alcance del inventario; (b) si el
+ciclo de vida de cursor que muestra la GUI (DECLARE/OPEN/FETCH/CLOSE, con los pasos ausentes
+tachados) cruza la línea de "interpretación semántica profunda de EXEC SQL/CICS", que el spec
+sitúa fuera del MVP.
+
 **2026-07-23 — renderizado de grafos: React Flow + elkjs en la GUI; Mermaid queda como export.**
 Tras investigar alternativas (GoJS y yFiles descartados por licencia comercial de pago —
 incompatible con un proyecto Apache-2.0 distribuido por npx; JointJS y D3 viables pero con más

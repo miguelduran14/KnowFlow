@@ -143,7 +143,10 @@ export function renderFacts(
       ].filter(Boolean)
       out.push(`- FICHERO ${file.name}${decl.length > 0 ? ' | ' + decl.join(' | ') : ''}`)
       for (const op of file.operations) {
-        out.push(`  - ${op.verb}${op.mode ? ' ' + op.mode : ''} en ${op.paragraph} (L${op.line})`)
+        const where = op.paragraphImplicit
+          ? `${op.paragraph} [entrada implícita — no es un párrafo declarado]`
+          : op.paragraph
+        out.push(`  - ${op.verb}${op.mode ? ' ' + op.mode : ''} en ${where} (L${op.line})`)
       }
       if (file.operations.length === 0) {
         out.push('  - declarado pero SIN operaciones en el fuente aportado')
@@ -170,7 +173,10 @@ export function renderFacts(
     if (inventory.execs.length > 0) {
       out.push('Bloques EXEC en orden de fuente (texto literal, sin interpretar):')
       for (const exec of inventory.execs) {
-        out.push(`  - L${exec.line}${exec.paragraph ? ` (${exec.paragraph})` : ''}: ${exec.text}`)
+        const where = exec.paragraph
+          ? ` (${exec.paragraph}${exec.paragraphImplicit ? ' — entrada implícita' : ''})`
+          : ' (DATA DIVISION)'
+        out.push(`  - L${exec.line}${where}: ${exec.text}`)
       }
     }
   }

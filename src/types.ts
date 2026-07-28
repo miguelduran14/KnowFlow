@@ -165,6 +165,13 @@ export interface FileOperation {
   mode?: string | undefined
   /** Párrafo donde aparece la sentencia */
   paragraph: string
+  /**
+   * El nombre de `paragraph` es el del nodo de entrada sintético, no el de
+   * un párrafo declarado en el fuente: la sentencia aparece antes de la
+   * primera cabecera de párrafo. Mismo criterio que `FlowParagraph.implicit`
+   * — se marca en vez de hacerlo pasar por un hecho del fuente (ADR-0003).
+   */
+  paragraphImplicit?: boolean | undefined
   line: number
 }
 
@@ -172,7 +179,12 @@ export interface FileOperation {
 export interface FileUsage {
   /** Nombre lógico COBOL (SELECT <nombre>) */
   name: string
-  /** ASSIGN TO ... — el DD del JCL, si el SELECT lo nombra */
+  /**
+   * Nombre de sistema del `ASSIGN TO`, tal cual aparece. NO se interpreta:
+   * en z/OS suele contener el ddname del JCL (a veces con prefijos como
+   * `UT-S-`), pero deducir cuál es la parte del DD sería una convención,
+   * no un hecho del fuente.
+   */
   assignTo?: string | undefined
   /** ORGANIZATION IS ... tal cual, sin interpretar */
   organization?: string | undefined
@@ -190,14 +202,15 @@ export interface ExecBlock {
   verb: string
   /** Párrafo donde aparece; ausente si el bloque está en la DATA DIVISION */
   paragraph?: string | undefined
+  /** Ver `FileOperation.paragraphImplicit` */
+  paragraphImplicit?: boolean | undefined
   line: number
   /** Texto del bloque colapsado a una línea, EXEC/END-EXEC incluidos */
   text: string
-  /**
-   * SQL: tablas nombradas tras FROM/JOIN/INSERT INTO/UPDATE.
-   * CICS: opciones con valor literal, como `FILE(CUSTFILE)`.
-   */
-  names: string[]
+  /** SQL: tablas nombradas tras FROM/JOIN/INSERT INTO/UPDATE. Vacío en CICS */
+  tables: string[]
+  /** CICS: opciones con valor literal, como `FILE(CUSTFILE)`. Vacío en SQL */
+  options: string[]
   /** SQL: cursor nombrado por el bloque (DECLARE/OPEN/FETCH/CLOSE) */
   cursor?: string | undefined
 }

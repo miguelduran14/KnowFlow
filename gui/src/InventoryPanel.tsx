@@ -1,4 +1,4 @@
-import type { Inventory } from 'knowflow'
+import { factsFidelity, type Inventory } from 'knowflow'
 
 /**
  * "¿Este programa qué toca?" — ficheros con su DD y sus operaciones,
@@ -24,8 +24,18 @@ export function InventoryPanel({ inventory }: { inventory: Inventory }) {
     )
   }
 
+  // La etiqueta la calcula el motor, no la GUI, para que todas las
+  // superficies etiqueten igual.
+  const fidelity = factsFidelity(undefined, undefined, inventory)
+
   return (
     <div className="inventory">
+      <div className={`schema__fidelity schema__fidelity--${fidelity.level}`}>
+        {fidelity.level === 'verified'
+          ? 'Verificado por parser — cada fichero, tabla y comando sale de una línea concreta del fuente, sin interpretar qué significan.'
+          : `Parcialmente verificado (${fidelity.reasons.join('; ')}).`}
+      </div>
+
       {inventory.unresolvedFileOps.length > 0 && (
         <div className="inventory__warn">
           Operaciones de E/S cuyo fichero no se puede resolver con este fuente:{' '}
@@ -43,7 +53,7 @@ export function InventoryPanel({ inventory }: { inventory: Inventory }) {
             <div key={file.name} className="inv-file">
               <div className="inv-file__head">
                 <span className="inv-file__name">{file.name}</span>
-                {file.assignTo && <span className="pill">DD {file.assignTo}</span>}
+                {file.assignTo && <span className="pill">ASSIGN {file.assignTo}</span>}
                 {file.organization && <span className="pill">{file.organization}</span>}
                 {file.access && <span className="pill">{file.access}</span>}
               </div>
@@ -57,7 +67,8 @@ export function InventoryPanel({ inventory }: { inventory: Inventory }) {
                       {op.mode ? ` ${op.mode}` : ''}
                     </span>
                     <span className="inv-op__where">
-                      {op.paragraph} · L{op.line}
+                      {op.paragraph}
+                      {op.paragraphImplicit ? ' (entrada implícita)' : ''} · L{op.line}
                     </span>
                   </div>
                 ))
@@ -141,11 +152,19 @@ export function InventoryPanel({ inventory }: { inventory: Inventory }) {
               {inventory.execs.map((exec, i) => (
                 <tr key={i}>
                   <td className="cell-num">{exec.line}</td>
-                  <td>{exec.paragraph ?? 'DATA DIVISION'}</td>
+                  <td>
+                    {exec.paragraph ?? 'DATA DIVISION'}
+                    {exec.paragraphImplicit && <span className="pill pill--warn">entrada implícita</span>}
+                  </td>
                   <td>
                     <span className={`inv-tag inv-tag--${exec.kind}`}>
                       {exec.kind.toUpperCase()} {exec.verb}
                     </span>
+                    {exec.options.map(option => (
+                      <span key={option} className="inv-tag inv-tag--cics">
+                        {option}
+                      </span>
+                    ))}
                   </td>
                   <td className="inv-execs__text">{exec.text}</td>
                 </tr>

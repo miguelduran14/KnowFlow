@@ -19,6 +19,7 @@ import { cleanLines, matchHeader, type SourceLine } from './source-lines.js'
  * fichero inventado (ADR-0003).
  */
 
+const PROGRAM_ID_RE = /(?<![\w-])PROGRAM-ID\s*\.\s*([A-Za-z][\w-]*)/i
 const DIVISION_RE = /^\s*(IDENTIFICATION|ENVIRONMENT|DATA|PROCEDURE)\s+DIVISION/i
 const SECTION_RE = /^\s*([A-Z][\w-]*)\s+SECTION\s*\.\s*$/i
 const FILE_CONTROL_RE = /^\s*FILE-CONTROL\s*\./i
@@ -202,6 +203,19 @@ function collectFdRecords(lines: SourceLine[]): Map<string, string[]> {
 export function parseInventory(source: string): Inventory {
   const lines = cleanLines(source)
 
+  // Nombre del nodo de entrada sintético — el mismo criterio que usa el
+  // parser de flujo, para que un párrafo implícito se llame igual en las
+  // dos vistas y se puedan cruzar.
+  let programId: string | undefined
+  for (const { masked } of lines) {
+    const m = PROGRAM_ID_RE.exec(masked)
+    if (m) {
+      programId = m[1]!
+      break
+    }
+  }
+  const implicitEntry = programId ?? 'MAIN'
+
   const files = collectSelects(lines)
   const fdRecords = collectFdRecords(lines)
   for (const file of files) {
@@ -227,7 +241,14 @@ export function parseInventory(source: string): Inventory {
   // "FROM T" dentro de un literal no es una tabla) y la original para el
   // texto legible y los valores literales de las opciones CICS.
   let openExec:
-    | { kind: 'sql' | 'cics'; line: number; parts: string[]; raw: string[]; paragraph?: string | undefined }
+    | {
+        kind: 'sql' | 'cics'
+        line: number
+        parts: string[]
+        raw: string[]
+        paragraph?: string | undefined
+        paragraphImplicit?: boolean | undefined
+      }
     | undefined
 
   const record = (target: string, op: FileOperation): void => {
@@ -244,7 +265,10 @@ export function parseInventory(source: string): Inventory {
       openExec.raw.push(body.trim())
       if (END_EXEC_RE.test(masked)) {
         execs.push(
-          buildExec(openExec.kind, collapse(openExec.parts), collapse(openExec.raw), openExec.line, openExec.paragraph),
+          buildExec(openExec.kind, collapse(openExec.parts), collapse(openExec.raw), openExec.line, {
+            paragraph: openExec.paragraph,
+            implicit: openExec.paragraphImplicit,
+          }),
         )
         openExec = undefined
       }
@@ -259,14 +283,28 @@ export function parseInventory(source: string): Inventory {
     const execStart = EXEC_START_RE.exec(masked)
     if (execStart) {
       const kind = execStart[1]!.toUpperCase() === 'SQL' ? 'sql' : 'cics'
-      // Un EXEC en la DATA DIVISION no tiene párrafo; uno en la PROCEDURE
-      // siempre lo tiene, aunque aparezca antes del primer párrafo
-      // declarado (mismo nodo de entrada sintético que usa el flujo).
-      const where = inProcedure ? paragraph ?? 'MAIN' : undefined
+      // Un EXEC en la DATA DIVISION no tiene párrafo. Uno en la PROCEDURE
+      // que aparezca antes de la primera cabecera cae en el nodo de
+      // entrada sintético, y se marca como tal: el nombre no está en el
+      // fuente (ADR-0003).
+      const where = inProcedure ? paragraph ?? implicitEntry : undefined
+      const isImplicit = inProcedure && paragraph === undefined
       if (END_EXEC_RE.test(masked)) {
-        execs.push(buildExec(kind, collapse([masked]), collapse([body]), line, where))
+        execs.push(
+          buildExec(kind, collapse([masked]), collapse([body]), line, {
+            paragraph: where,
+            implicit: isImplicit,
+          }),
+        )
       } else {
-        openExec = { kind, line, parts: [masked.trim()], raw: [body.trim()], paragraph: where }
+        openExec = {
+          kind,
+          line,
+          parts: [masked.trim()],
+          raw: [body.trim()],
+          paragraph: where,
+          ...(isImplicit ? { paragraphImplicit: true } : {}),
+        }
       }
       continue
     }
@@ -278,8 +316,8 @@ export function parseInventory(source: string): Inventory {
       paragraph = header.name
       continue
     }
-    if (paragraph === undefined) paragraph = 'MAIN'
-    const owner = paragraph
+    const owner = paragraph ?? implicitEntry
+    const ownerImplicit = paragraph === undefined
 
     /** Consume la lista de ficheros de un OPEN/CLOSE, actualizando el modo */
     const takeFileList = (verb: 'OPEN' | 'CLOSE', text: string): void => {
@@ -295,6 +333,7 @@ export function parseInventory(source: string): Inventory {
           verb,
           ...(verb === 'OPEN' && pendingMode ? { mode: pendingMode } : {}),
           paragraph: owner,
+          ...(ownerImplicit ? { paragraphImplicit: true } : {}),
           line,
         })
       }
@@ -328,7 +367,12 @@ export function parseInventory(source: string): Inventory {
     }
 
     for (const m of masked.matchAll(SINGLE_IO_RE)) {
-      record(m[2]!.toUpperCase(), { verb: m[1]!.toUpperCase() as FileVerb, paragraph, line })
+      record(m[2]!.toUpperCase(), {
+        verb: m[1]!.toUpperCase() as FileVerb,
+        paragraph: owner,
+        ...(ownerImplicit ? { paragraphImplicit: true } : {}),
+        line,
+      })
     }
   }
 
@@ -336,11 +380,14 @@ export function parseInventory(source: string): Inventory {
   // del fuente aportado, y ocultarlo perdería una tabla o un comando.
   if (openExec) {
     execs.push(
-      buildExec(openExec.kind, collapse(openExec.parts), collapse(openExec.raw), openExec.line, openExec.paragraph),
+      buildExec(openExec.kind, collapse(openExec.parts), collapse(openExec.raw), openExec.line, {
+        paragraph: openExec.paragraph,
+        implicit: openExec.paragraphImplicit,
+      }),
     )
   }
 
-  const tables = unique(execs.filter(e => e.kind === 'sql').flatMap(e => e.names))
+  const tables = unique(execs.flatMap(e => e.tables))
 
   const cursors = new Map<string, CursorUsage>()
   for (const exec of execs) {
@@ -356,7 +403,7 @@ export function parseInventory(source: string): Inventory {
     const verb = exec.verb
     if (verb === 'DECLARE') {
       entry.declared = true
-      entry.tables = unique([...entry.tables, ...exec.names])
+      entry.tables = unique([...entry.tables, ...exec.tables])
     }
     if (verb === 'OPEN') entry.opened = true
     if (verb === 'FETCH') entry.fetched = true
@@ -392,16 +439,22 @@ function buildExec(
   masked: string,
   raw: string,
   line: number,
-  paragraph: string | undefined,
+  where: { paragraph: string | undefined; implicit: boolean | undefined },
 ): ExecBlock {
+  const location = {
+    ...(where.paragraph ? { paragraph: where.paragraph } : {}),
+    ...(where.implicit ? { paragraphImplicit: true } : {}),
+  }
+
   if (kind === 'cics') {
     return {
       kind,
       verb: cicsCommand(masked),
-      ...(paragraph ? { paragraph } : {}),
+      ...location,
       line,
       text: raw,
-      names: cicsOptions(raw),
+      tables: [],
+      options: cicsOptions(raw),
     }
   }
 
@@ -410,10 +463,11 @@ function buildExec(
   return {
     kind,
     verb: verbMatch ? verbMatch[1]!.toUpperCase() : '',
-    ...(paragraph ? { paragraph } : {}),
+    ...location,
     line,
     text: raw,
-    names: sqlTables(masked),
+    tables: sqlTables(masked),
+    options: [],
     ...(cursor ? { cursor: cursor.name } : {}),
   }
 }

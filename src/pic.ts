@@ -39,25 +39,19 @@ function binarySize(totalDigits: number): number {
 }
 
 /**
- * Clasifica un carácter de PIC expandido: qué aporta al conteo de bytes.
- *
- * En DISPLAY, cada posición de la PIC cuesta EXACTAMENTE un byte — dígitos,
- * signos, caracteres de edición (Z, *, +, -, coma, punto, barra, B, 0) y
- * los sufijos CR/DB (que ocupan 2 bytes cada uno). V (decimal implícito) y
- * S (signo embebido, excepto SEPARATE) NO cuestan bytes.
- *
- * La clasificación importa porque los empaquetados (COMP-3, COMP) solo
- * cuentan posiciones numéricas (9, Z, *) y los que aceptan un signo embebido.
- */
-/**
- * Determina si un PIC expandido es numérico, editado-numérico, o alfanumérico.
+ * Determina si un PIC expandido es numérico, editado-numérico o alfanumérico.
  * Numérico puro: solo 9, S, V, P.
- * Editado numérico: contiene Z, *, +, -, CR, DB, coma, punto, B (como edición), 0 (inserción).
+ * Editado numérico: contiene algún carácter de edición — Z y * (supresión),
+ * + y - (signo), coma, punto, barra, B (espacio), 0 (inserción de cero), o
+ * los sufijos CR/DB.
  * Alfanumérico: contiene X o A.
+ *
+ * Se ejecuta sobre el PIC ya expandido, así que el 0 de `9(10)` no llega
+ * hasta aquí: solo se ve un 0 escrito como posición de inserción.
  */
 function classifyPic(expanded: string): 'numeric' | 'numeric-edited' | 'alphanumeric' {
   if (/[XA]/i.test(expanded)) return 'alphanumeric'
-  if (/[Z*+\-,./B]|CR|DB/i.test(expanded)) return 'numeric-edited'
+  if (/[Z*+\-,./B0]|CR|DB/i.test(expanded)) return 'numeric-edited'
   return 'numeric'
 }
 
@@ -84,13 +78,18 @@ function displayBytes(expanded: string, signSeparate: boolean): number {
 }
 
 /**
- * Cuenta dígitos numéricos de un PIC expandido — las posiciones que cuentan
- * para la aritmética COMP-3 y COMP. Son: 9, Z, *, P (scaling), y el primer
- * + o - (como dígito de signo, los demás son inserción).
+ * Cuenta las posiciones de dígito de un PIC expandido: 9, Z y * (los dos
+ * últimos son dígitos suprimibles, no adornos) y P (scaling, que cuenta
+ * como dígito aunque no ocupe byte). El signo (S, + o -) y los caracteres
+ * de inserción (coma, barra, B, 0, CR, DB) NO son dígitos.
+ *
+ * La parte decimal se separa por V (decimal implícito) o por el punto de
+ * un PIC editado: en `ZZ,ZZ9.99` los dos últimos 9 son decimales, igual
+ * que en `9(5)V99`.
  */
 function countDigits(expanded: string): { total: number; decimal: number } {
   const noSign = expanded.replace(/^S/i, '')
-  const parts = noSign.split(/V/i)
+  const parts = noSign.split(/[V.]/i)
   const intPart = parts[0] ?? ''
   const decPart = parts[1] ?? ''
 

@@ -1,5 +1,6 @@
 import ELK from 'elkjs/lib/elk.bundled.js'
 import type { ElkNode } from 'elkjs/lib/elk.bundled.js'
+import { flowEdgeLabel } from 'knowflow'
 import type { FlowEdge, FlowResult, LinkedFlow } from 'knowflow'
 
 export type NodeVariant = 'paragraph' | 'section' | 'implicit' | 'call' | 'missing'
@@ -37,21 +38,6 @@ export interface CanvasGraph {
 /** Mismo criterio que el motor usa para Mermaid: COBOL es case-insensitive */
 function nodeId(name: string): string {
   return name.toUpperCase().replace(/[^A-Z0-9]/g, '_')
-}
-
-function edgeLabel(edge: FlowEdge): string {
-  const base = (): string => {
-    if (edge.kind === 'call') return edge.dynamic ? 'CALL dinámica' : 'CALL'
-    if (edge.kind === 'goto') return edge.condition ? `GO TO ${edge.condition}` : 'GO TO'
-    let label = 'PERFORM'
-    if (edge.thru) label += ` THRU ${edge.thru}`
-    if (edge.times !== undefined) label += ` ${edge.times} TIMES`
-    if (edge.condition) label += ` ${edge.condition}`
-    return label
-  }
-  // Mismo formato que el export Mermaid del motor: la guarda IF/EVALUATE
-  // delante entre corchetes, porque es lo primero que hay que saber.
-  return edge.guards ? `[${edge.guards.join(' AND ')}] ${base()}` : base()
 }
 
 const elk = new ELK()
@@ -192,7 +178,7 @@ export async function layoutFlow(flow: FlowResult): Promise<CanvasGraph> {
     id: `e${i}`,
     source: nodeId(edge.from),
     target: nodeId(edge.to),
-    label: edgeLabel(edge),
+    label: flowEdgeLabel(edge),
     kind: edge.kind,
     dynamic: edge.dynamic === true,
     toMissing: missing.has(nodeId(edge.to)),

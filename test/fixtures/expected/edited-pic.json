@@ -64,7 +64,7 @@
         {
           "level": 5,
           "name": "RPT-ZERO-INS",
-          "type": "numeric",
+          "type": "numeric-edited",
           "picture": "909",
           "lengthInBytes": 3,
           "offset": 42,

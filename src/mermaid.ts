@@ -12,7 +12,13 @@ function escapeLabel(text: string): string {
   return text.replace(/"/g, '#quot;')
 }
 
-function edgeLabel(edge: FlowEdge): string {
+/**
+ * Etiqueta legible de una arista de flujo. Vive en el motor, no en cada
+ * superficie, para que el export Mermaid y el canvas de la GUI digan
+ * exactamente lo mismo de la misma arista (ADR-0002: la GUI depende del
+ * motor, nunca al revés).
+ */
+export function flowEdgeLabel(edge: FlowEdge): string {
   const base = (): string => {
     if (edge.kind === 'call') return edge.dynamic ? 'CALL dinámica' : 'CALL'
     if (edge.kind === 'goto') return edge.condition ? `GO TO ${edge.condition}` : 'GO TO'
@@ -77,7 +83,7 @@ export function flowToMermaid(flow: FlowResult): string {
   }
 
   for (const edge of flow.edges) {
-    out.push(`  ${nodeId(edge.from)} -->|"${escapeLabel(edgeLabel(edge))}"| ${nodeId(edge.to)}`)
+    out.push(`  ${nodeId(edge.from)} -->|"${escapeLabel(flowEdgeLabel(edge))}"| ${nodeId(edge.to)}`)
   }
 
   return out.join('\n') + '\n'
