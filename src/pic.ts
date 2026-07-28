@@ -39,6 +39,76 @@ function binarySize(totalDigits: number): number {
 }
 
 /**
+ * Clasifica un carácter de PIC expandido: qué aporta al conteo de bytes.
+ *
+ * En DISPLAY, cada posición de la PIC cuesta EXACTAMENTE un byte — dígitos,
+ * signos, caracteres de edición (Z, *, +, -, coma, punto, barra, B, 0) y
+ * los sufijos CR/DB (que ocupan 2 bytes cada uno). V (decimal implícito) y
+ * S (signo embebido, excepto SEPARATE) NO cuestan bytes.
+ *
+ * La clasificación importa porque los empaquetados (COMP-3, COMP) solo
+ * cuentan posiciones numéricas (9, Z, *) y los que aceptan un signo embebido.
+ */
+/**
+ * Determina si un PIC expandido es numérico, editado-numérico, o alfanumérico.
+ * Numérico puro: solo 9, S, V, P.
+ * Editado numérico: contiene Z, *, +, -, CR, DB, coma, punto, B (como edición), 0 (inserción).
+ * Alfanumérico: contiene X o A.
+ */
+function classifyPic(expanded: string): 'numeric' | 'numeric-edited' | 'alphanumeric' {
+  if (/[XA]/i.test(expanded)) return 'alphanumeric'
+  if (/[Z*+\-,./B]|CR|DB/i.test(expanded)) return 'numeric-edited'
+  return 'numeric'
+}
+
+/**
+ * Cuenta bytes DISPLAY de un PIC expandido. Cada carácter posicional = 1 byte,
+ * excepto V (decimal implícito, 0 bytes), S (signo embebido, 0 bytes a menos
+ * que SIGN SEPARATE), y CR/DB (2 bytes cada uno — pero en el expandido cada
+ * letra ya está separada: C, R se cuentan individualmente, 1+1=2).
+ */
+function displayBytes(expanded: string, signSeparate: boolean): number {
+  let bytes = 0
+  for (const ch of expanded) {
+    const upper = ch.toUpperCase()
+    if (upper === 'V') continue
+    if (upper === 'S') {
+      if (signSeparate) bytes++
+      continue
+    }
+    // P (scaling) no ocupa byte físico
+    if (upper === 'P') continue
+    bytes++
+  }
+  return bytes || 1
+}
+
+/**
+ * Cuenta dígitos numéricos de un PIC expandido — las posiciones que cuentan
+ * para la aritmética COMP-3 y COMP. Son: 9, Z, *, P (scaling), y el primer
+ * + o - (como dígito de signo, los demás son inserción).
+ */
+function countDigits(expanded: string): { total: number; decimal: number } {
+  const noSign = expanded.replace(/^S/i, '')
+  const parts = noSign.split(/V/i)
+  const intPart = parts[0] ?? ''
+  const decPart = parts[1] ?? ''
+
+  function digitCount(s: string): number {
+    let count = 0
+    for (const ch of s) {
+      const upper = ch.toUpperCase()
+      if (upper === '9' || upper === 'Z' || upper === '*' || upper === 'P') count++
+    }
+    return count
+  }
+
+  const intDigits = digitCount(intPart)
+  const decDigits = digitCount(decPart)
+  return { total: intDigits + decDigits, decimal: decDigits }
+}
+
+/**
  * Parsea una cláusula PIC (y USAGE) y calcula tipo y longitud en bytes.
  * COMP-1/COMP-2 no requieren PIC — su tamaño es fijo (float de 4/8 bytes).
  */
@@ -55,25 +125,20 @@ export function parsePic(rawPicture: string | undefined, usage?: string, options
   }
 
   const expanded = expandPic(picture)
-  const isNumeric = /[9SV]/.test(expanded) && !/[XA]/.test(expanded)
+  const classification = classifyPic(expanded)
 
-  if (!isNumeric) {
-    const len = (expanded.match(/X/gi) ?? []).length
-      + (expanded.match(/A/gi) ?? []).length
+  if (classification === 'alphanumeric') {
+    const len = displayBytes(expanded, false)
     return {
       type: 'alphanumeric',
       picture,
       totalDigits: 0,
       decimalDigits: 0,
-      lengthInBytes: len || 1,
+      lengthInBytes: len,
     }
   }
 
-  const integerPart = expanded.replace(/^S/, '').split('V')[0] ?? ''
-  const decimalPart = expanded.split('V')[1] ?? ''
-  const intDigits = (integerPart.match(/9/g) ?? []).length
-  const decDigits = (decimalPart.match(/9/g) ?? []).length
-  const totalDigits = intDigits + decDigits
+  const { total: totalDigits, decimal: decDigits } = countDigits(expanded)
 
   if (normalizedUsage === 'COMP3' || normalizedUsage === 'PACKEDDECIMAL') {
     const bytes = Math.ceil((totalDigits + 1) / 2)
@@ -96,13 +161,18 @@ export function parsePic(rawPicture: string | undefined, usage?: string, options
     }
   }
 
-  const signExtra = options?.signSeparate ? 1 : 0
+  const bytes = displayBytes(expanded, options?.signSeparate === true)
+
   return {
-    type: 'numeric',
+    // Un PIC editado es un campo de presentación: los caracteres de
+    // inserción ocupan bytes reales pero no son dígitos con los que
+    // se pueda operar. Distinguirlo evita que la tabla de esquema
+    // sugiera que ZZ,ZZ9.99 se comporta como 9(7)V99.
+    type: classification === 'numeric-edited' ? 'numeric-edited' : 'numeric',
     picture,
     totalDigits,
     decimalDigits: decDigits,
-    lengthInBytes: totalDigits + signExtra,
+    lengthInBytes: bytes,
   }
 }
 

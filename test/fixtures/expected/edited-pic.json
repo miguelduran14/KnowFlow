@@ -1,0 +1,77 @@
+{
+  "records": [
+    {
+      "level": 1,
+      "name": "REPORT-LINE",
+      "type": "group",
+      "lengthInBytes": 45,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "RPT-AMOUNT",
+          "type": "numeric-edited",
+          "picture": "ZZ,ZZ9.99",
+          "lengthInBytes": 9,
+          "offset": 0,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "RPT-STARS",
+          "type": "numeric-edited",
+          "picture": "****9",
+          "lengthInBytes": 5,
+          "offset": 9,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "RPT-SIGNED",
+          "type": "numeric-edited",
+          "picture": "+9(5)",
+          "lengthInBytes": 6,
+          "offset": 14,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "RPT-CR",
+          "type": "numeric-edited",
+          "picture": "9(5)CR",
+          "lengthInBytes": 7,
+          "offset": 20,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "RPT-DATE",
+          "type": "numeric-edited",
+          "picture": "99/99/9999",
+          "lengthInBytes": 10,
+          "offset": 27,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "RPT-SPACED",
+          "type": "numeric-edited",
+          "picture": "9B9B9",
+          "lengthInBytes": 5,
+          "offset": 37,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "RPT-ZERO-INS",
+          "type": "numeric",
+          "picture": "909",
+          "lengthInBytes": 3,
+          "offset": 42,
+          "children": []
+        }
+      ]
+    }
+  ],
+  "missingCopybooks": []
+}

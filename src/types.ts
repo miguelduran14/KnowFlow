@@ -2,6 +2,12 @@
 export type DataType =
   | 'alphanumeric'
   | 'numeric'
+  /**
+   * PIC con caracteres de edición (Z, *, +, -, coma, punto, barra, B, 0,
+   * CR, DB): campo de presentación, no de cálculo. Ocupa un byte por cada
+   * posición de la PIC, incluidos los caracteres de inserción.
+   */
+  | 'numeric-edited'
   | 'packed-decimal'
   | 'binary'
   | 'float-single'

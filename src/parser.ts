@@ -29,7 +29,11 @@ interface RawUnresolvedCopy {
 type RawStatement = RawField | RawCondition | RawUnresolvedCopy
 
 const LEVEL_RE = /^(\d{1,2})\s+([\w-]+)/
-const PIC_RE = /PIC(?:TURE)?\s+IS\s+([\w()V,\-+*/]+)|PIC(?:TURE)?\s+([\w()V,\-+*/]+)/i
+// El punto es ambiguo en COBOL: dentro de un PIC editado (PIC ZZ,ZZ9.99)
+// es el punto decimal de edición; fuera es el terminador de sentencia. Lo
+// resolvemos con un lookahead: si al punto le sigue un dígito o carácter
+// de edición (Z, 9, *, etc.), es parte de la PIC.
+const PIC_RE = /PIC(?:TURE)?\s+IS\s+([\w()V,\-+*/]+(?:\.(?=[0-9Z*+\-])[\w()V,\-+*/]+)*)|PIC(?:TURE)?\s+([\w()V,\-+*/]+(?:\.(?=[0-9Z*+\-])[\w()V,\-+*/]+)*)/i
 const USAGE_RE = /(?:USAGE\s+IS\s+|USAGE\s+)?\b(COMPUTATIONAL-3|COMPUTATIONAL-2|COMPUTATIONAL-1|COMPUTATIONAL|COMP-3|COMP-2|COMP-1|COMP|BINARY|PACKED-DECIMAL|DISPLAY)\b/i
 const REDEFINES_RE = /REDEFINES\s+([\w-]+)/i
 const OCCURS_RE = /OCCURS\s+(\d+)(?:\s+TO\s+(\d+))?\s+TIMES(?:\s+DEPENDING\s+ON\s+([\w-]+))?/i
