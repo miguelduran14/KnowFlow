@@ -8,7 +8,11 @@ export function joinContinuations(lines: string[]): string[] {
   const logical: string[] = []
 
   for (const raw of lines) {
-    const line = raw.length > 6 ? raw.slice(6) : raw
+    // Columna 7 = indicador, columnas 8-72 = programa, 73-80 = zona de
+    // identificación que el compilador ignora (p. ej. "CM2014.2" en la
+    // suite NIST). Recortarla evita que un VALUE o un PIC se traguen esa
+    // basura y que la detección de fin de sentencia por punto se rompa.
+    const line = raw.length > 6 ? raw.slice(6, 72) : raw
     const trimmed = line.trimStart()
 
     if (trimmed === '' || trimmed.startsWith('*')) continue

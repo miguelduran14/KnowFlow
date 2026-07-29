@@ -45,10 +45,15 @@ export function cleanLines(source: string): SourceLine[] {
   for (let i = 0; i < raw.length; i++) {
     let body: string
     if (fixed) {
-      const content = raw[i]!.length > 6 ? raw[i]!.slice(6) : raw[i]!
-      const indicator = content[0] ?? ' '
+      const line = raw[i]!
+      const indicator = line.length > 6 ? line[6]! : ' '
       if (indicator === '*' || indicator === '/') continue
-      body = content.slice(1)
+      // El área de programa es columnas 8-72. Las columnas 73-80 son la
+      // zona de identificación/secuencia (p. ej. "CM2014.2" en la suite
+      // NIST): el compilador las ignora, y si no se recortan, la basura
+      // final impide que una cabecera "PARRAFO." o un "PROCEDURE DIVISION."
+      // acaben en punto y se pierde todo el cuerpo del programa.
+      body = line.length > 7 ? line.slice(7, 72) : ''
     } else {
       body = raw[i]!
       if (body.trimStart().startsWith('*')) continue
@@ -93,6 +98,27 @@ export function matchHeader(masked: string): { name: string; kind: 'paragraph' |
     return { name: paraMatch[1]!, kind: 'paragraph' }
   }
   return undefined
+}
+
+/**
+ * Extrae los PROGRAM-ID del fuente, con su línea. El primero es el
+ * programa; los demás son programas anidados. Cubre las dos formas del
+ * estándar: el nombre en la misma línea (`PROGRAM-ID. FOO.`) y el nombre
+ * en la línea siguiente (`PROGRAM-ID.` / `    FOO.`), que es como lo
+ * escribe la suite NIST y buena parte del COBOL clásico.
+ */
+export function extractProgramIds(lines: SourceLine[]): { name: string; line: number }[] {
+  const out: { name: string; line: number }[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const m = /(?<![\w-])PROGRAM-ID\s*\.\s*([A-Za-z0-9][\w-]*)?/i.exec(lines[i]!.masked)
+    if (!m) continue
+    let name = m[1]
+    if (!name && lines[i + 1]) {
+      name = /^\s*([A-Za-z0-9][\w-]*)/.exec(lines[i + 1]!.masked)?.[1]
+    }
+    if (name) out.push({ name, line: lines[i]!.line })
+  }
+  return out
 }
 
 /** Trozo del body original correspondiente a un grupo capturado (los regex

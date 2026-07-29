@@ -1,0 +1,43 @@
+{
+  "programId": "FIXCOL",
+  "paragraphs": [
+    {
+      "name": "0000-MAIN",
+      "kind": "paragraph",
+      "terminates": true
+    },
+    {
+      "name": "1000-INIT",
+      "kind": "paragraph",
+      "fallsThrough": true
+    },
+    {
+      "name": "2000-PROCESS",
+      "kind": "paragraph"
+    }
+  ],
+  "edges": [
+    {
+      "from": "0000-MAIN",
+      "to": "1000-INIT",
+      "kind": "perform",
+      "line": 7
+    },
+    {
+      "from": "0000-MAIN",
+      "to": "2000-PROCESS",
+      "kind": "perform",
+      "condition": "UNTIL WS-EOF = 'Y'",
+      "line": 8
+    },
+    {
+      "from": "1000-INIT",
+      "to": "2000-PROCESS",
+      "kind": "fall-through",
+      "line": 12
+    }
+  ],
+  "missingTargets": [],
+  "nestedPrograms": [],
+  "fragment": false
+}

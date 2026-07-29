@@ -6,7 +6,7 @@ import type {
   FileVerb,
   Inventory,
 } from './types.js'
-import { cleanLines, matchHeader, type SourceLine } from './source-lines.js'
+import { cleanLines, extractProgramIds, matchHeader, type SourceLine } from './source-lines.js'
 
 /**
  * Inventario de lo que el programa toca: ficheros con sus operaciones,
@@ -19,7 +19,6 @@ import { cleanLines, matchHeader, type SourceLine } from './source-lines.js'
  * fichero inventado (ADR-0003).
  */
 
-const PROGRAM_ID_RE = /(?<![\w-])PROGRAM-ID\s*\.\s*([A-Za-z][\w-]*)/i
 const DIVISION_RE = /^\s*(IDENTIFICATION|ENVIRONMENT|DATA|PROCEDURE)\s+DIVISION/i
 const SECTION_RE = /^\s*([A-Z][\w-]*)\s+SECTION\s*\.\s*$/i
 const FILE_CONTROL_RE = /^\s*FILE-CONTROL\s*\./i
@@ -235,15 +234,7 @@ export function parseInventory(source: string): Inventory {
   // Nombre del nodo de entrada sintético — el mismo criterio que usa el
   // parser de flujo, para que un párrafo implícito se llame igual en las
   // dos vistas y se puedan cruzar.
-  let programId: string | undefined
-  for (const { masked } of lines) {
-    const m = PROGRAM_ID_RE.exec(masked)
-    if (m) {
-      programId = m[1]!
-      break
-    }
-  }
-  const implicitEntry = programId ?? 'MAIN'
+  const implicitEntry = extractProgramIds(lines)[0]?.name ?? 'MAIN'
 
   const files = collectSelects(lines)
   const fdRecords = collectFdRecords(lines)

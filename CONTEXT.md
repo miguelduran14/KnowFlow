@@ -133,6 +133,18 @@ futuro no está regalado. La marca/nombre se conserva. Ver ADR-0004.
 Las decisiones cerradas el 2026-07-14 (sesión de grilling) están registradas como ADRs en
 `docs/adr/`. Ante una decisión abierta, pregunta — no la cierres por tu cuenta (`AGENTS.md`).
 
+**2026-07-29 (5) — segunda ronda de corpus: ProLeap + NIST COBOL85 (495 ficheros).** Se pasan 495
+programas de la suite de tests de ProLeap —incluida la NIST COBOL85, la tortura clásica— por los
+tres parsers. **Cero crashes.** Dos hallazgos, ambos patrones comunísimos en mainframe real que
+CardDemo (sample moderno de AWS) no tenía: (a) la **zona de identificación en columnas 73-80** del
+formato fijo (p. ej. `CM2014.2`), que el compilador ignora; sin recortarla, ninguna cabecera ni el
+`PROCEDURE DIVISION.` acababa en punto y el parser de flujo perdía **450 de 495 programas** (salían
+vacíos). Recorte de cols 73-80 en formato fijo, en las dos rutas de líneas. (b) El **PROGRAM-ID con
+el nombre en la línea siguiente** (`PROGRAM-ID.` / `    FOO.`), como escribe la NIST; ahora se
+detecta, y la extracción se centralizó en `extractProgramIds` (antes duplicada en flujo e
+inventario). Tras los arreglos: de 450 falsos vacíos a 0 — los 8 restantes son programas lineales
+de verdad (sin PERFORM/CALL/GO TO), donde 0 aristas es correcto. Fixture fixed-columns + 6 tests.
+
 **2026-07-29 (4) — primera validación contra corpus real (AWS CardDemo).** Hasta aquí los tests
 eran fixtures sintéticas mías. Se pasan 7 programas reales de CardDemo (COBOL público MIT, batch +
 CICS online, 400–4200 líneas) por los tres parsers. **Cero crashes**, los layouts de datos

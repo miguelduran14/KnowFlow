@@ -1,13 +1,13 @@
 import type { FlowEdge, FlowParagraph, FlowResult } from './types.js'
 import {
   cleanLines,
+  extractProgramIds,
   groupText,
   isDeclarativesMarker,
   matchHeader,
   type SourceLine,
 } from './source-lines.js'
 
-const PROGRAM_ID_RE = /(?<![\w-])PROGRAM-ID\s*\.\s*([A-Za-z][\w-]*)/i
 const PROCEDURE_DIVISION_RE = /^\s*PROCEDURE\s+DIVISION/i
 const END_PROGRAM_RE = /^\s*END\s+PROGRAM\b/i
 const TERMINATES_G = /(?<![\w-])(?:STOP\s+RUN|GOBACK|EXIT\s+PROGRAM)(?![\w-])/gi
@@ -142,11 +142,7 @@ export function parseFlow(source: string): FlowResult {
 
   // Todos los PROGRAM-ID del fuente: el primero es este programa, los
   // demás son programas anidados dentro de él.
-  const programIds: { name: string; line: number }[] = []
-  for (const { masked, line } of cleaned) {
-    const m = PROGRAM_ID_RE.exec(masked)
-    if (m) programIds.push({ name: m[1]!, line })
-  }
+  const programIds = extractProgramIds(cleaned)
   const programId = programIds[0]?.name
   const nestedPrograms = programIds.slice(1).map(p => p.name)
   const nestedFrom = programIds[1]?.line

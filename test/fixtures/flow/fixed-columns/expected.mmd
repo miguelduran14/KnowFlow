@@ -1,0 +1,7 @@
+flowchart TD
+  0000_MAIN["0000-MAIN — fin"]
+  1000_INIT["1000-INIT"]
+  2000_PROCESS["2000-PROCESS"]
+  0000_MAIN -->|"PERFORM"| 1000_INIT
+  0000_MAIN -->|"PERFORM UNTIL WS-EOF = 'Y'"| 2000_PROCESS
+  1000_INIT -.->|"cae en (sin transferencia)"| 2000_PROCESS
