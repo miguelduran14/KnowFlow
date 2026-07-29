@@ -133,6 +133,17 @@ futuro no está regalado. La marca/nombre se conserva. Ver ADR-0004.
 Las decisiones cerradas el 2026-07-14 (sesión de grilling) están registradas como ADRs en
 `docs/adr/`. Ante una decisión abierta, pregunta — no la cierres por tu cuenta (`AGENTS.md`).
 
+**2026-07-29 (6) — conexión API lista para una IA corporativa.** Sobre la interfaz de proveedor
+agnóstica ya existente, se añade un adaptador **compatible con OpenAI** (`createOpenAICompatibleProvider`):
+configurable en endpoint, modelo, clave y cabecera de auth (`Authorization: Bearer` por defecto,
+`api-key` estilo Azure como opción). Cubre el segundo proveedor con una sola implementación y deja
+"lista para conectar" una IA corporativa (CODEX/AXET) cuyo shape exacto aún no se conoce: casi todos
+los gateways hablan ese formato; si no, la interfaz permite un adaptador a medida sin tocar el motor.
+La GUI gana un selector de proveedor (Claude / IA corporativa) con sus campos, BYOK/local-first
+igual que Claude. Se mantiene la línea de IP: el aviso en modo corporativo recuerda que enviar código
+de clientes por cualquier endpoint sigue siendo decisión del usuario. 4 tests con fetch mockeado.
+*Pendiente:* el endpoint y la auth reales de CODEX/AXET los aporta el usuario cuando los tenga.
+
 **2026-07-29 (5) — segunda ronda de corpus: ProLeap + NIST COBOL85 (495 ficheros).** Se pasan 495
 programas de la suite de tests de ProLeap —incluida la NIST COBOL85, la tortura clásica— por los
 tres parsers. **Cero crashes.** Dos hallazgos, ambos patrones comunísimos en mainframe real que

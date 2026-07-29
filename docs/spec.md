@@ -133,9 +133,10 @@ Tomadas en el grilling y registradas como ADRs; aquí la vista consolidada:
   *(Añadido 2026-07-23; guardas 2026-07-28; control de flujo completo 2026-07-29.)* **Cerrado.**
 - Cadena entre programas: varios fuentes aportados a la vez, resolviendo qué CALL cruza a qué
   programa y listando los que faltan por aportar. *(Añadido 2026-07-23.)* **Cerrado.**
-- Capa LLM BYOK (interfaz agnóstica + adaptador Claude + proveedor falso para tests) y explicación
-  en lenguaje llano sobre los hechos de datos y flujo. **Cerrado** para el primer adaptador; el
-  segundo (OpenAI/GPT) sigue siendo post-MVP.
+- Capa LLM BYOK (interfaz agnóstica + adaptador Claude + adaptador compatible con OpenAI para
+  gateways corporativos/OpenAI/Azure + proveedor falso para tests) y explicación en lenguaje llano
+  sobre los hechos de datos y flujo. **Cerrado.** El adaptador OpenAI-compatible cubre el segundo
+  proveedor con una sola implementación configurable (endpoint, modelo, clave, cabecera de auth).
 - Inventario de "qué toca el programa": ficheros (SELECT/ASSIGN + OPEN/READ/WRITE/CLOSE), tablas
   DB2, cursores y comandos CICS, sin interpretación semántica. Los EXEC SQL/CICS con el recurso en
   una variable (SQL dinámico, `FILE(WS-…)`) se marcan como dinámicos. **Cerrado.**
