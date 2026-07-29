@@ -1,0 +1,47 @@
+{
+  "programId": "FALLPRG",
+  "paragraphs": [
+    {
+      "name": "DRIVER-PARA",
+      "kind": "paragraph",
+      "terminates": true
+    },
+    {
+      "name": "STEP-ONE",
+      "kind": "paragraph",
+      "fallsThrough": true
+    },
+    {
+      "name": "STEP-TWO",
+      "kind": "paragraph",
+      "fallsThrough": true
+    },
+    {
+      "name": "DEAD-PARA",
+      "kind": "paragraph"
+    }
+  ],
+  "edges": [
+    {
+      "from": "DRIVER-PARA",
+      "to": "STEP-ONE",
+      "kind": "perform",
+      "line": 14
+    },
+    {
+      "from": "STEP-ONE",
+      "to": "STEP-TWO",
+      "kind": "fall-through",
+      "line": 18
+    },
+    {
+      "from": "STEP-TWO",
+      "to": "DEAD-PARA",
+      "kind": "fall-through",
+      "line": 20
+    }
+  ],
+  "missingTargets": [],
+  "nestedPrograms": [],
+  "fragment": false
+}

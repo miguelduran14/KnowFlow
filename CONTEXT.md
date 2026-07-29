@@ -133,16 +133,27 @@ futuro no está regalado. La marca/nombre se conserva. Ver ADR-0004.
 Las decisiones cerradas el 2026-07-14 (sesión de grilling) están registradas como ADRs en
 `docs/adr/`. Ante una decisión abierta, pregunta — no la cierres por tu cuenta (`AGENTS.md`).
 
+**2026-07-29 (2) — el flujo cuenta cómo se recorre de verdad el programa.** Segunda tanda de la
+misma auditoría, sobre el grafo de flujo. (a) **Caída natural**: un párrafo que no acaba en
+transferencia incondicional (STOP RUN/GOBACK/EXIT PROGRAM o GO TO fuera de rama) cae en el
+siguiente por orden de fuente — EL malentendido clásico del que hereda COBOL. Se dibuja explícita,
+con flecha punteada y en gris, y marcada como caída, no como sentencia. (b) `SORT/MERGE
+INPUT/OUTPUT PROCEDURE`: aristas propias a los párrafos de entrada y salida. (c) `AT END`,
+`NOT AT END`, `INVALID KEY`, `ON SIZE ERROR`, `ON OVERFLOW`, `ON EXCEPTION` y sus terminadores de
+ámbito (`END-READ`, `END-COMPUTE`…): ramas con guarda, como IF/EVALUATE. (d) `PERFORM` en línea
+(`UNTIL`/`VARYING`/`n TIMES`/`FOREVER`): su cuerpo se marca con la guarda "en bucle (…)". Límite
+conocido y documentado en el tipo `fall-through`: si a un párrafo se llegó por PERFORM o SORT, al
+final del rango se vuelve al llamador; la caída solo ocurre de verdad al llegar ejecutando en
+línea. Queda pendiente el grupo C: de qué sección de la DATA DIVISION viene cada 01, `VALUE`
+inicial, y recursos CICS/SQL dinámicos marcados.
+
 **2026-07-29 — cerradas las construcciones en las que el parser mentía en silencio.** Auditoría
 del parser contra 13 construcciones sin cubrir. Se corrigen las cinco que daban un número falso
 sin marcarlo, que es lo que ADR-0003 prohíbe: `SYNCHRONIZED` (los bytes de relleno desplazan todo
 lo que sigue; antes se ignoraban), `USAGE POINTER`/`INDEX` (salían como grupo de 0 bytes),
 nivel 66 `RENAMES` (se colaba como hijo del último campo y le borraba la longitud — un registro
 de 5 bytes salía como 2), programas anidados (mezclaban sus párrafos con los del programa
-externo) y `DECLARATIVES` (abría un párrafo de entrada fantasma). Queda pendiente, y **decidido
-que se aborda después**: el flujo no dibuja la caída natural entre párrafos, ni `SORT INPUT/OUTPUT
-PROCEDURE`, ni trata `AT END`/`INVALID KEY` como ramas; y el esquema no dice de qué sección de la
-DATA DIVISION viene cada 01.
+externo) y `DECLARATIVES` (abría un párrafo de entrada fantasma).
 
 **2026-07-28 — el inventario incluye E/S de ficheros, y las aristas de flujo llevan guarda.**
 El spec del grilling solo pedía "inventario de bloques EXEC SQL/CICS". Al construirlo se amplía a

@@ -36,6 +36,11 @@ const EDGE_COLOR: Record<string, string> = {
   perform: '#7aa2f7',
   goto: '#e0af68',
   call: '#9ece6a',
+  'sort-input': '#7dcfff',
+  'sort-output': '#7dcfff',
+  // Gris apagado: la caída natural es la que menos ruido debe meter, es el
+  // fondo sobre el que destacan las transferencias explícitas.
+  'fall-through': '#565f89',
 }
 
 export function FlowCanvas({ flow }: { flow: FlowResult }) {
@@ -63,7 +68,15 @@ export function FlowCanvas({ flow }: { flow: FlowResult }) {
           // Las aristas condicionales se pintan en el color de la rama y
           // más finas: de un vistazo se distingue el camino que siempre se
           // recorre del que depende de un IF/EVALUATE.
-          const color = e.toMissing ? '#f7768e' : e.guarded ? '#bb9af7' : EDGE_COLOR[e.kind] ?? '#7aa2f7'
+          const isFall = e.kind === 'fall-through'
+          const color = isFall
+            ? EDGE_COLOR['fall-through']!
+            : e.toMissing
+              ? '#f7768e'
+              : e.guarded
+                ? '#bb9af7'
+                : EDGE_COLOR[e.kind] ?? '#7aa2f7'
+          const dash = e.kind === 'call' ? (e.dynamic ? '3 3' : '7 4') : isFall ? '2 4' : undefined
           return {
             id: e.id,
             source: e.source,
@@ -72,10 +85,10 @@ export function FlowCanvas({ flow }: { flow: FlowResult }) {
             type: 'smoothstep',
             style: {
               stroke: color,
-              strokeWidth: e.guarded ? 1.2 : 1.6,
-              ...(e.kind === 'call' ? { strokeDasharray: e.dynamic ? '3 3' : '7 4' } : {}),
+              strokeWidth: e.guarded || isFall ? 1.2 : 1.6,
+              ...(dash ? { strokeDasharray: dash } : {}),
             },
-            labelStyle: { fill: e.guarded ? '#bb9af7' : '#c0caf5', fontSize: 11 },
+            labelStyle: { fill: isFall ? '#565f89' : e.guarded ? '#bb9af7' : '#c0caf5', fontSize: 11 },
             labelBgStyle: { fill: '#1f2335', fillOpacity: 0.9 },
             labelBgPadding: [6, 3] as [number, number],
             labelBgBorderRadius: 4,

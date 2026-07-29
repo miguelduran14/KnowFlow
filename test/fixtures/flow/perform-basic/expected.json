@@ -8,15 +8,18 @@
     },
     {
       "name": "INIT-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "PROCESS-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "DETAIL-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "WRAP-UP-PARA",
@@ -47,6 +50,24 @@
       "to": "DETAIL-PARA",
       "kind": "perform",
       "line": 16
+    },
+    {
+      "from": "INIT-PARA",
+      "to": "PROCESS-PARA",
+      "kind": "fall-through",
+      "line": 15
+    },
+    {
+      "from": "PROCESS-PARA",
+      "to": "DETAIL-PARA",
+      "kind": "fall-through",
+      "line": 18
+    },
+    {
+      "from": "DETAIL-PARA",
+      "to": "WRAP-UP-PARA",
+      "kind": "fall-through",
+      "line": 20
     }
   ],
   "missingTargets": [],

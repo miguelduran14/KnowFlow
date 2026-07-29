@@ -18,3 +18,11 @@ flowchart TD
   MAIN_PARA -->|"PERFORM"| CLOSE_PARA
   INIT_PARA -->|"[WS-COUNT > 0 AND WS-READY = 'Y' AND WS-DEEP = 1] CALL"| SUBPRG
   INIT_PARA -->|"[WS-COUNT > 0 AND WS-READY = 'Y'] PERFORM"| MID_PARA
+  MAIN_PARA -.->|"cae en (sin transferencia)"| INIT_PARA
+  INIT_PARA -.->|"cae en (sin transferencia)"| PATH_A
+  PATH_A -.->|"cae en (sin transferencia)"| PATH_B
+  PATH_B -.->|"cae en (sin transferencia)"| DO_A
+  DO_A -.->|"cae en (sin transferencia)"| DO_BC
+  DO_BC -.->|"cae en (sin transferencia)"| DO_REST
+  DO_REST -.->|"cae en (sin transferencia)"| MID_PARA
+  MID_PARA -.->|"cae en (sin transferencia)"| CLOSE_PARA

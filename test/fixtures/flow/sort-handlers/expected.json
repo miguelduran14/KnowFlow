@@ -1,0 +1,119 @@
+{
+  "programId": "SORTPRG",
+  "paragraphs": [
+    {
+      "name": "MAIN-PARA",
+      "kind": "paragraph",
+      "terminates": true
+    },
+    {
+      "name": "LOAD-PARA",
+      "kind": "paragraph",
+      "terminates": true
+    },
+    {
+      "name": "MARK-DONE-PARA",
+      "kind": "paragraph",
+      "fallsThrough": true
+    },
+    {
+      "name": "EMIT-PARA",
+      "kind": "paragraph",
+      "fallsThrough": true
+    },
+    {
+      "name": "BAD-KEY-PARA",
+      "kind": "paragraph",
+      "fallsThrough": true
+    },
+    {
+      "name": "OVERFLOW-PARA",
+      "kind": "paragraph",
+      "fallsThrough": true
+    },
+    {
+      "name": "EMIT-EXIT",
+      "kind": "paragraph",
+      "terminates": true
+    }
+  ],
+  "edges": [
+    {
+      "from": "MAIN-PARA",
+      "to": "LOAD-PARA",
+      "kind": "sort-input",
+      "line": 10
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "EMIT-PARA",
+      "kind": "sort-output",
+      "thru": "EMIT-EXIT",
+      "line": 11
+    },
+    {
+      "from": "LOAD-PARA",
+      "to": "MARK-DONE-PARA",
+      "kind": "perform",
+      "line": 16,
+      "guards": [
+        "en bucle (VARYING WS-I FROM 1 BY 1 UNTIL WS-I > 100)",
+        "AT END"
+      ]
+    },
+    {
+      "from": "EMIT-PARA",
+      "to": "EMIT-EXIT",
+      "kind": "goto",
+      "line": 25,
+      "guards": [
+        "AT END"
+      ]
+    },
+    {
+      "from": "EMIT-PARA",
+      "to": "BAD-KEY-PARA",
+      "kind": "perform",
+      "line": 28,
+      "guards": [
+        "INVALID KEY"
+      ]
+    },
+    {
+      "from": "EMIT-PARA",
+      "to": "OVERFLOW-PARA",
+      "kind": "perform",
+      "line": 31,
+      "guards": [
+        "ON SIZE ERROR"
+      ]
+    },
+    {
+      "from": "MARK-DONE-PARA",
+      "to": "EMIT-PARA",
+      "kind": "fall-through",
+      "line": 23
+    },
+    {
+      "from": "EMIT-PARA",
+      "to": "BAD-KEY-PARA",
+      "kind": "fall-through",
+      "line": 33
+    },
+    {
+      "from": "BAD-KEY-PARA",
+      "to": "OVERFLOW-PARA",
+      "kind": "fall-through",
+      "line": 35
+    },
+    {
+      "from": "OVERFLOW-PARA",
+      "to": "EMIT-EXIT",
+      "kind": "fall-through",
+      "line": 37
+    }
+  ],
+  "missingTargets": [],
+  "nestedPrograms": [],
+  "fragment": false
+}

@@ -22,6 +22,9 @@ export function flowEdgeLabel(edge: FlowEdge): string {
   const base = (): string => {
     if (edge.kind === 'call') return edge.dynamic ? 'CALL dinámica' : 'CALL'
     if (edge.kind === 'goto') return edge.condition ? `GO TO ${edge.condition}` : 'GO TO'
+    if (edge.kind === 'fall-through') return 'cae en (sin transferencia)'
+    if (edge.kind === 'sort-input') return edge.thru ? `SORT INPUT THRU ${edge.thru}` : 'SORT INPUT'
+    if (edge.kind === 'sort-output') return edge.thru ? `SORT OUTPUT THRU ${edge.thru}` : 'SORT OUTPUT'
     let label = 'PERFORM'
     if (edge.thru) label += ` THRU ${edge.thru}`
     if (edge.times !== undefined) label += ` ${edge.times} TIMES`
@@ -89,7 +92,10 @@ export function flowToMermaid(flow: FlowResult): string {
   }
 
   for (const edge of flow.edges) {
-    out.push(`  ${nodeId(edge.from)} -->|"${escapeLabel(flowEdgeLabel(edge))}"| ${nodeId(edge.to)}`)
+    // La caída natural es implícita en el fuente (no hay sentencia que la
+    // provoque): flecha punteada para separarla de una transferencia real.
+    const arrow = edge.kind === 'fall-through' ? '-.->' : '-->'
+    out.push(`  ${nodeId(edge.from)} ${arrow}|"${escapeLabel(flowEdgeLabel(edge))}"| ${nodeId(edge.to)}`)
   }
 
   return out.join('\n') + '\n'

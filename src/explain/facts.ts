@@ -107,12 +107,14 @@ export function renderFacts(
         para.kind === 'section' ? 'SECTION' : '',
         para.section ? `(en ${para.section})` : '',
         para.terminates ? '[termina el programa]' : '',
+        para.inDeclaratives ? '[en DECLARATIVES — lo invoca el runtime, no se ejecuta en línea]' : '',
+        para.fallsThrough ? '[cae en el párrafo siguiente si no se corta antes]' : '',
         para.implicit ? '[entrada implícita — sentencias antes del primer párrafo]' : '',
       ].filter(Boolean)
       out.push(`- ${para.name}${marks.length > 0 ? ' ' + marks.join(' ') : ''}`)
     }
     if (flow.edges.length > 0) {
-      out.push('Aristas de flujo (una por sentencia, con línea del fuente):')
+      out.push('Aristas de flujo (transferencias de control y caídas naturales, con línea del fuente):')
       for (const edge of flow.edges) {
         const extra = [
           edge.thru ? `THRU ${edge.thru}` : '',
@@ -122,6 +124,9 @@ export function renderFacts(
           // incondicional y explicaría un flujo que el programa no tiene.
           edge.guards ? `[solo si ${edge.guards.join(' AND ')}]` : '',
           edge.dynamic ? '[dinámica: destino real solo se conoce en ejecución]' : '',
+          edge.kind === 'fall-through'
+            ? '[caída natural: no hay sentencia que la provoque; si se llegó por PERFORM/SORT, al final se vuelve al llamador]'
+            : '',
         ].filter(Boolean)
         out.push(
           `- L${edge.line}: ${edge.from} -> ${edge.to} (${edge.kind.toUpperCase()}${extra.length > 0 ? ' ' + extra.join(' ') : ''})`,

@@ -1,0 +1,8 @@
+flowchart TD
+  DRIVER_PARA["DRIVER-PARA — fin"]
+  STEP_ONE["STEP-ONE"]
+  STEP_TWO["STEP-TWO"]
+  DEAD_PARA["DEAD-PARA"]
+  DRIVER_PARA -->|"PERFORM"| STEP_ONE
+  STEP_ONE -.->|"cae en (sin transferencia)"| STEP_TWO
+  STEP_TWO -.->|"cae en (sin transferencia)"| DEAD_PARA

@@ -3,35 +3,43 @@
   "paragraphs": [
     {
       "name": "MAIN-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "INIT-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "PATH-A",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "PATH-B",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "DO-A",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "DO-BC",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "DO-REST",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "MID-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "CLOSE-PARA",
@@ -115,6 +123,54 @@
       "guards": [
         "WS-COUNT > 0 AND WS-READY = 'Y'"
       ]
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "INIT-PARA",
+      "kind": "fall-through",
+      "line": 24
+    },
+    {
+      "from": "INIT-PARA",
+      "to": "PATH-A",
+      "kind": "fall-through",
+      "line": 32
+    },
+    {
+      "from": "PATH-A",
+      "to": "PATH-B",
+      "kind": "fall-through",
+      "line": 34
+    },
+    {
+      "from": "PATH-B",
+      "to": "DO-A",
+      "kind": "fall-through",
+      "line": 36
+    },
+    {
+      "from": "DO-A",
+      "to": "DO-BC",
+      "kind": "fall-through",
+      "line": 38
+    },
+    {
+      "from": "DO-BC",
+      "to": "DO-REST",
+      "kind": "fall-through",
+      "line": 40
+    },
+    {
+      "from": "DO-REST",
+      "to": "MID-PARA",
+      "kind": "fall-through",
+      "line": 42
+    },
+    {
+      "from": "MID-PARA",
+      "to": "CLOSE-PARA",
+      "kind": "fall-through",
+      "line": 44
     }
   ],
   "missingTargets": [],

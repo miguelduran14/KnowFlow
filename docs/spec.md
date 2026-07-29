@@ -125,8 +125,10 @@ Tomadas en el grilling y registradas como ADRs; aquí la vista consolidada:
 - Data division → esquema legible como tabla Markdown exportable. Parser del esquema cerrado
   (T1–T3); la exportación a tabla Markdown (T4) queda **pausada**, prioridad tras el flujo.
 - Parser de procedure division: párrafos y grafo PERFORM/CALL/GO TO, con diagrama de flujo, y
-  cada arista guardada con las condiciones IF/EVALUATE bajo las que ocurre.
-  *(Añadido 2026-07-23; guardas añadidas 2026-07-28.)* **Cerrado.**
+  cada arista guardada con las condiciones IF/EVALUATE/manejador bajo las que ocurre. Incluye la
+  caída natural entre párrafos, `SORT INPUT/OUTPUT PROCEDURE`, los manejadores (`AT END`,
+  `INVALID KEY`, `ON SIZE ERROR`…) como ramas, y el cuerpo de un `PERFORM` en línea como bucle.
+  *(Añadido 2026-07-23; guardas 2026-07-28; control de flujo completo 2026-07-29.)* **Cerrado.**
 - Cadena entre programas: varios fuentes aportados a la vez, resolviendo qué CALL cruza a qué
   programa y listando los que faltan por aportar. *(Añadido 2026-07-23.)* **Cerrado.**
 - Capa LLM BYOK (interfaz agnóstica + adaptador Claude + proveedor falso para tests) y explicación

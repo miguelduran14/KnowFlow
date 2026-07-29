@@ -124,13 +124,41 @@ export interface FlowParagraph {
   /** Contiene STOP RUN, GOBACK o EXIT PROGRAM */
   terminates?: boolean | undefined
   /**
+   * El párrafo no contiene ninguna transferencia de control incondicional
+   * (STOP RUN, GOBACK, EXIT PROGRAM o GO TO fuera de toda rama), así que
+   * quien llegue aquí ejecutando en línea sigue en el párrafo siguiente.
+   * Ausente en el último párrafo, que no tiene siguiente.
+   */
+  fallsThrough?: boolean | undefined
+  /**
+   * El párrafo está dentro de DECLARATIVES: no se ejecuta en línea, lo
+   * invoca el runtime ante la condición que declara su USE.
+   */
+  inDeclaratives?: boolean | undefined
+  /**
    * Nodo de entrada sintético: agrupa las sentencias que aparecen antes
    * del primer párrafo declarado. No existe como párrafo en el fuente.
    */
   implicit?: boolean | undefined
 }
 
-export type FlowEdgeKind = 'perform' | 'call' | 'goto'
+export type FlowEdgeKind =
+  | 'perform'
+  | 'call'
+  | 'goto'
+  /**
+   * Caída natural: el párrafo anterior no acaba en transferencia de
+   * control, así que el que llega por orden de fuente sigue en el
+   * siguiente. Ocurre de verdad cuando se llega al párrafo ejecutando en
+   * línea; si se llegó por PERFORM, al final del rango se vuelve al
+   * llamador. Eso depende de la ejecución, no del fuente, así que la
+   * arista dice lo que sí es verificable: aquí no hay nada que corte.
+   */
+  | 'fall-through'
+  /** SORT/MERGE ... INPUT PROCEDURE IS ... */
+  | 'sort-input'
+  /** SORT/MERGE ... OUTPUT PROCEDURE IS ... */
+  | 'sort-output'
 
 /** Una arista de flujo extraída de una sentencia concreta del fuente */
 export interface FlowEdge {

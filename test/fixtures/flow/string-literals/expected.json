@@ -3,7 +3,8 @@
   "paragraphs": [
     {
       "name": "MAIN-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "REAL-PARA",
@@ -22,6 +23,12 @@
       "to": "REAL-PARA",
       "kind": "perform",
       "line": 11
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "REAL-PARA",
+      "kind": "fall-through",
+      "line": 12
     }
   ],
   "missingTargets": [],

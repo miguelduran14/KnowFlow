@@ -6,3 +6,5 @@ flowchart TD
   LOG_PARA["LOG-PARA"]
   ERR_PARA -->|"PERFORM"| LOG_PARA
   MAIN_PARA -->|"PERFORM"| LOG_PARA
+  ERR_SECTION -.->|"cae en (sin transferencia)"| ERR_PARA
+  MAIN_SECTION -.->|"cae en (sin transferencia)"| MAIN_PARA

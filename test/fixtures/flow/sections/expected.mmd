@@ -5,3 +5,6 @@ flowchart TD
   READ_PARA["READ-PARA"]
   WRITE_PARA["WRITE-PARA"]
   MAIN_PARA -->|"PERFORM"| IO_SECTION
+  CONTROL_SECTION -.->|"cae en (sin transferencia)"| MAIN_PARA
+  IO_SECTION -.->|"cae en (sin transferencia)"| READ_PARA
+  READ_PARA -.->|"cae en (sin transferencia)"| WRITE_PARA

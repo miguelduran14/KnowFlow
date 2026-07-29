@@ -3,7 +3,8 @@
   "paragraphs": [
     {
       "name": "CONTROL-SECTION",
-      "kind": "section"
+      "kind": "section",
+      "fallsThrough": true
     },
     {
       "name": "MAIN-PARA",
@@ -13,12 +14,14 @@
     },
     {
       "name": "IO-SECTION",
-      "kind": "section"
+      "kind": "section",
+      "fallsThrough": true
     },
     {
       "name": "READ-PARA",
       "kind": "paragraph",
-      "section": "IO-SECTION"
+      "section": "IO-SECTION",
+      "fallsThrough": true
     },
     {
       "name": "WRITE-PARA",
@@ -32,6 +35,24 @@
       "to": "IO-SECTION",
       "kind": "perform",
       "line": 8
+    },
+    {
+      "from": "CONTROL-SECTION",
+      "to": "MAIN-PARA",
+      "kind": "fall-through",
+      "line": 7
+    },
+    {
+      "from": "IO-SECTION",
+      "to": "READ-PARA",
+      "kind": "fall-through",
+      "line": 11
+    },
+    {
+      "from": "READ-PARA",
+      "to": "WRITE-PARA",
+      "kind": "fall-through",
+      "line": 13
     }
   ],
   "missingTargets": [],

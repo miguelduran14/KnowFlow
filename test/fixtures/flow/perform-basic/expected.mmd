@@ -8,3 +8,6 @@ flowchart TD
   MAIN_PARA -->|"PERFORM"| PROCESS_PARA
   MAIN_PARA -->|"PERFORM"| WRAP_UP_PARA
   PROCESS_PARA -->|"PERFORM"| DETAIL_PARA
+  INIT_PARA -.->|"cae en (sin transferencia)"| PROCESS_PARA
+  PROCESS_PARA -.->|"cae en (sin transferencia)"| DETAIL_PARA
+  DETAIL_PARA -.->|"cae en (sin transferencia)"| WRAP_UP_PARA

@@ -7,3 +7,6 @@ flowchart TD
   MAIN_PARA -->|"PERFORM THRU SETUP-EXIT"| SETUP_PARA
   MAIN_PARA -->|"PERFORM 3 TIMES"| COUNT_PARA
   MAIN_PARA -->|"PERFORM UNTIL WS-EOF = 'Y'"| READ_PARA
+  SETUP_PARA -.->|"cae en (sin transferencia)"| SETUP_EXIT
+  SETUP_EXIT -.->|"cae en (sin transferencia)"| COUNT_PARA
+  COUNT_PARA -.->|"cae en (sin transferencia)"| READ_PARA

@@ -8,15 +8,18 @@
     },
     {
       "name": "SETUP-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "SETUP-EXIT",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "COUNT-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "READ-PARA",
@@ -44,6 +47,24 @@
       "kind": "perform",
       "condition": "UNTIL WS-EOF = 'Y'",
       "line": 8
+    },
+    {
+      "from": "SETUP-PARA",
+      "to": "SETUP-EXIT",
+      "kind": "fall-through",
+      "line": 15
+    },
+    {
+      "from": "SETUP-EXIT",
+      "to": "COUNT-PARA",
+      "kind": "fall-through",
+      "line": 17
+    },
+    {
+      "from": "COUNT-PARA",
+      "to": "READ-PARA",
+      "kind": "fall-through",
+      "line": 19
     }
   ],
   "missingTargets": [],

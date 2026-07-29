@@ -11,7 +11,8 @@
     },
     {
       "name": "CHOICE-B",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "FINISH-PARA",
@@ -58,6 +59,12 @@
       "to": "GHOST-PARA",
       "kind": "goto",
       "line": 17
+    },
+    {
+      "from": "CHOICE-B",
+      "to": "FINISH-PARA",
+      "kind": "fall-through",
+      "line": 20
     }
   ],
   "missingTargets": [

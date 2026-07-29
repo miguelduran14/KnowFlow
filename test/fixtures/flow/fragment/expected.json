@@ -3,11 +3,13 @@
     {
       "name": "MAIN",
       "kind": "paragraph",
-      "implicit": true
+      "implicit": true,
+      "fallsThrough": true
     },
     {
       "name": "VALIDATE-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "fallsThrough": true
     },
     {
       "name": "APPLY-PARA",
@@ -29,6 +31,18 @@
       "guards": [
         "WS-OK = 'Y'"
       ]
+    },
+    {
+      "from": "MAIN",
+      "to": "VALIDATE-PARA",
+      "kind": "fall-through",
+      "line": 7
+    },
+    {
+      "from": "VALIDATE-PARA",
+      "to": "APPLY-PARA",
+      "kind": "fall-through",
+      "line": 9
     }
   ],
   "missingTargets": [],

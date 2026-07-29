@@ -3,16 +3,20 @@
   "paragraphs": [
     {
       "name": "ERR-SECTION",
-      "kind": "section"
+      "kind": "section",
+      "inDeclaratives": true,
+      "fallsThrough": true
     },
     {
       "name": "ERR-PARA",
       "kind": "paragraph",
-      "section": "ERR-SECTION"
+      "section": "ERR-SECTION",
+      "inDeclaratives": true
     },
     {
       "name": "MAIN-SECTION",
-      "kind": "section"
+      "kind": "section",
+      "fallsThrough": true
     },
     {
       "name": "MAIN-PARA",
@@ -38,6 +42,18 @@
       "to": "LOG-PARA",
       "kind": "perform",
       "line": 16
+    },
+    {
+      "from": "ERR-SECTION",
+      "to": "ERR-PARA",
+      "kind": "fall-through",
+      "line": 11
+    },
+    {
+      "from": "MAIN-SECTION",
+      "to": "MAIN-PARA",
+      "kind": "fall-through",
+      "line": 15
     }
   ],
   "missingTargets": [],
