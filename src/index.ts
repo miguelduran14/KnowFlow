@@ -3,7 +3,13 @@ export { parseFlow } from './flow-parser.js'
 export { parseInventory } from './inventory.js'
 export { flowEdgeLabel, flowToMermaid, linkedFlowToMermaid } from './mermaid.js'
 export { linkPrograms } from './linker.js'
-export { explainProgram, SYSTEM_PROMPT, type ProgramFacts } from './explain/explain.js'
+export {
+  explainProgram,
+  SYSTEM_PROMPT,
+  type ProgramFacts,
+  type Explanation,
+  type WalkthroughStep,
+} from './explain/explain.js'
 export { factsFidelity, renderFacts, type FactsFidelity } from './explain/facts.js'
 export { createClaudeProvider, DEFAULT_CLAUDE_MODEL, type ClaudeProviderOptions } from './explain/claude.js'
 export {

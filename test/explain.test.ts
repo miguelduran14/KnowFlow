@@ -90,11 +90,65 @@ describe('explainProgram', () => {
 
     const result = await explainProgram({ flow }, provider)
 
-    expect(result).toBe('respuesta simulada')
+    // Una respuesta que no es JSON cae a modo no estructurado, conservando
+    // el texto crudo como respaldo.
+    expect(result.structured).toBe(false)
+    expect(result.raw).toBe('respuesta simulada')
     expect(provider.calls).toHaveLength(1)
     const call = provider.calls[0]!
     expect(call.system).toBe(SYSTEM_PROMPT)
     expect(call.user).toContain('- L9: MAIN-PARA -> INIT-PARA (PERFORM)')
+  })
+
+  it('parses structured JSON and binds each step to a real paragraph', async () => {
+    const flow = parseFlow(readFixture('flow', 'perform-basic', 'main.cbl'))
+    const provider = createFakeProvider(
+      JSON.stringify({
+        summary: 'Un programa de ejemplo.',
+        walkthrough: [
+          { text: 'Arranca en el párrafo principal.', paragraph: 'MAIN-PARA' },
+          { text: 'Inicializa los contadores.', paragraph: 'INIT-PARA' },
+          { text: 'Una etapa sin párrafo concreto.' },
+        ],
+      }),
+    )
+
+    const result = await explainProgram({ flow }, provider)
+
+    expect(result.structured).toBe(true)
+    expect(result.summary).toBe('Un programa de ejemplo.')
+    expect(result.walkthrough).toEqual([
+      { text: 'Arranca en el párrafo principal.', paragraph: 'MAIN-PARA' },
+      { text: 'Inicializa los contadores.', paragraph: 'INIT-PARA' },
+      { text: 'Una etapa sin párrafo concreto.' },
+    ])
+  })
+
+  it('drops a paragraph reference the model invented (ADR-0003)', async () => {
+    const flow = parseFlow(readFixture('flow', 'perform-basic', 'main.cbl'))
+    const provider = createFakeProvider(
+      JSON.stringify({
+        summary: 'Resumen.',
+        walkthrough: [{ text: 'Salta a un párrafo fantasma.', paragraph: 'NO-EXISTE-PARA' }],
+      }),
+    )
+
+    const result = await explainProgram({ flow }, provider)
+
+    // El texto de la etapa se conserva; la referencia inventada se descarta.
+    expect(result.walkthrough).toEqual([{ text: 'Salta a un párrafo fantasma.' }])
+  })
+
+  it('tolerates JSON wrapped in code fences', async () => {
+    const flow = parseFlow(readFixture('flow', 'perform-basic', 'main.cbl'))
+    const provider = createFakeProvider(
+      '```json\n{"summary":"Con vallas.","walkthrough":[]}\n```',
+    )
+
+    const result = await explainProgram({ flow }, provider)
+
+    expect(result.structured).toBe(true)
+    expect(result.summary).toBe('Con vallas.')
   })
 
   it('never sends raw source, only rendered facts', async () => {
