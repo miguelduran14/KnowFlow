@@ -122,8 +122,10 @@ Tomadas en el grilling y registradas como ADRs; aquí la vista consolidada:
 ## Dentro del MVP (slice 1)
 
 - Resolución de COPY/REPLACING y `EXEC SQL INCLUDE` (con modo degradado marcando huecos). **Cerrado (T1–T3).**
-- Data division → esquema legible como tabla Markdown exportable. Parser del esquema cerrado
-  (T1–T3); la exportación a tabla Markdown (T4) queda **pausada**, prioridad tras el flujo.
+- Data division → esquema legible. Parser del esquema cerrado (T1–T3), ampliado el 2026-07-29 con
+  SYNCHRONIZED, POINTER/INDEX, nivel 66 RENAMES, el valor inicial (`VALUE`) y la sección de la que
+  viene cada 01 (FILE/WORKING-STORAGE/LOCAL-STORAGE/LINKAGE). La exportación a tabla Markdown (T4)
+  queda **pausada**, prioridad tras el flujo.
 - Parser de procedure division: párrafos y grafo PERFORM/CALL/GO TO, con diagrama de flujo, y
   cada arista guardada con las condiciones IF/EVALUATE/manejador bajo las que ocurre. Incluye la
   caída natural entre párrafos, `SORT INPUT/OUTPUT PROCEDURE`, los manejadores (`AT END`,
@@ -135,7 +137,8 @@ Tomadas en el grilling y registradas como ADRs; aquí la vista consolidada:
   en lenguaje llano sobre los hechos de datos y flujo. **Cerrado** para el primer adaptador; el
   segundo (OpenAI/GPT) sigue siendo post-MVP.
 - Inventario de "qué toca el programa": ficheros (SELECT/ASSIGN + OPEN/READ/WRITE/CLOSE), tablas
-  DB2, cursores y comandos CICS, sin interpretación semántica. **Cerrado.**
+  DB2, cursores y comandos CICS, sin interpretación semántica. Los EXEC SQL/CICS con el recurso en
+  una variable (SQL dinámico, `FILE(WS-…)`) se marcan como dinámicos. **Cerrado.**
 - Entrada por fichero (arrastrar) y por código pegado (programa o fragmento).
 - Etiquetas de nivel de fidelidad en toda salida.
 - Capa LLM pluggable BYOK con al menos los adaptadores Claude y OpenAI/GPT.

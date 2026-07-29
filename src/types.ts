@@ -56,6 +56,14 @@ export interface OccursDepending {
   dependingOn: string
 }
 
+/**
+ * Sección de la DATA DIVISION de la que viene un registro 01/77. Responde
+ * a "¿qué recibe el programa por parámetro?" (LINKAGE) frente a lo que es
+ * suyo (WORKING-STORAGE) o de un fichero (FILE). Ausente cuando el fuente
+ * es un copybook suelto sin cabecera de sección: no se adivina.
+ */
+export type DataSection = 'FILE' | 'WORKING-STORAGE' | 'LOCAL-STORAGE' | 'LINKAGE'
+
 /** Campo individual del esquema */
 export interface SchemaField {
   /** Número de nivel COBOL (01–49, 77) */
@@ -64,6 +72,18 @@ export interface SchemaField {
   name: string
   /** Tipo interpretado */
   type: DataType
+  /**
+   * Sección de la DATA DIVISION del registro. Solo en los 01/77 raíz —
+   * los hijos heredan la del suyo. Ausente si el fuente no traía cabecera
+   * de sección (copybook suelto).
+   */
+  dataSection?: DataSection | undefined
+  /**
+   * Valor inicial declarado (cláusula VALUE), verbatim del fuente:
+   * `'ABC'`, `ZEROS`, `42`, `ALL '*'`. Ausente si el campo no lo lleva.
+   * En un 88 no aparece aquí — sus valores van en `conditionValues`.
+   */
+  value?: string | undefined
   /** Cláusula PIC original, p. ej. "S9(7)V99". Ausente en groups y en COMP-1/COMP-2 sin PIC */
   picture?: string | undefined
   /** USAGE explícito normalizado (COMP-3, COMP, COMP-1, COMP-2, BINARY, PACKED-DECIMAL). Ausente = DISPLAY */
@@ -278,6 +298,14 @@ export interface ExecBlock {
   options: string[]
   /** SQL: cursor nombrado por el bloque (DECLARE/OPEN/FETCH/CLOSE) */
   cursor?: string | undefined
+  /**
+   * El recurso real solo se conoce en ejecución: SQL dinámico
+   * (PREPARE/EXECUTE, la sentencia viaja en una host variable) o un EXEC
+   * CICS cuyo recurso (FILE, PROGRAM, MAP…) es un data-name en vez de un
+   * literal. Como una CALL dinámica, se marca en vez de resolverse a
+   * ciegas (ADR-0003).
+   */
+  dynamic?: boolean | undefined
 }
 
 /** Un cursor DB2 y qué hace el programa con él */

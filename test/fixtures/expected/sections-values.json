@@ -1,0 +1,107 @@
+{
+  "records": [
+    {
+      "level": 1,
+      "name": "CUST-REC",
+      "type": "alphanumeric",
+      "picture": "X(80)",
+      "lengthInBytes": 80,
+      "offset": 0,
+      "children": [],
+      "dataSection": "FILE"
+    },
+    {
+      "level": 1,
+      "name": "WS-GREETING",
+      "type": "alphanumeric",
+      "picture": "X(5)",
+      "lengthInBytes": 5,
+      "offset": 0,
+      "children": [],
+      "value": "'HOLA'",
+      "dataSection": "WORKING-STORAGE"
+    },
+    {
+      "level": 1,
+      "name": "WS-COUNTER",
+      "type": "numeric",
+      "picture": "9(4)",
+      "lengthInBytes": 4,
+      "offset": 0,
+      "children": [],
+      "value": "ZEROS",
+      "dataSection": "WORKING-STORAGE"
+    },
+    {
+      "level": 1,
+      "name": "WS-BORDER",
+      "type": "alphanumeric",
+      "picture": "X(10)",
+      "lengthInBytes": 10,
+      "offset": 0,
+      "children": [],
+      "value": "ALL '*'",
+      "dataSection": "WORKING-STORAGE"
+    },
+    {
+      "level": 1,
+      "name": "WS-RATE",
+      "type": "numeric",
+      "picture": "9V99",
+      "lengthInBytes": 3,
+      "offset": 0,
+      "children": [],
+      "value": "1.05",
+      "dataSection": "WORKING-STORAGE"
+    },
+    {
+      "level": 1,
+      "name": "WS-STATE",
+      "type": "alphanumeric",
+      "picture": "X(1)",
+      "lengthInBytes": 1,
+      "offset": 0,
+      "children": [],
+      "value": "'N'",
+      "dataSection": "WORKING-STORAGE",
+      "conditionValues": [
+        {
+          "name": "IS-DONE",
+          "values": [
+            "'Y'"
+          ]
+        }
+      ]
+    },
+    {
+      "level": 1,
+      "name": "LK-PARM",
+      "type": "group",
+      "lengthInBytes": 6,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "LK-CODE",
+          "type": "alphanumeric",
+          "picture": "X(3)",
+          "lengthInBytes": 3,
+          "offset": 0,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "LK-AMOUNT",
+          "type": "packed-decimal",
+          "picture": "S9(5)",
+          "usage": "COMP-3",
+          "lengthInBytes": 3,
+          "offset": 3,
+          "children": []
+        }
+      ],
+      "dataSection": "LINKAGE"
+    }
+  ],
+  "missingCopybooks": []
+}

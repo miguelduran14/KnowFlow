@@ -12,6 +12,7 @@ export type {
   ConditionValue,
   CrossProgramCall,
   CursorUsage,
+  DataSection,
   DataType,
   ExecBlock,
   FileOperation,

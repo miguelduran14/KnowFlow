@@ -8,6 +8,10 @@ function FieldRows({ field, depth }: { field: SchemaField; depth: number }) {
       <tr className={isGap ? 'row--gap' : field.offsetUnknown ? 'row--unknown' : ''}>
         <td className="cell-name" style={{ paddingLeft: 10 + depth * 18 }}>
           {isGap ? `COPY ${field.unresolvedCopyMember}` : field.name}
+          {/* La sección responde a "¿qué recibe el programa?" (LINKAGE) frente
+              a lo suyo (WORKING-STORAGE) o de un fichero (FILE). */}
+          {field.dataSection && <span className="pill pill--section">{field.dataSection}</span>}
+          {field.value !== undefined && <span className="pill">= {field.value}</span>}
           {field.redefines && <span className="pill pill--redefines">REDEFINES {field.redefines}</span>}
           {field.occurs !== undefined && <span className="pill">×{field.occurs}</span>}
           {field.occursDepending && (

@@ -35,6 +35,9 @@ export function factsFidelity(
     const targets = [...new Set(inventory.unresolvedFileOps.map(o => o.target))]
     reasons.push(`operaciones de E/S sin fichero resuelto: ${targets.join(', ')}`)
   }
+  if (inventory?.execs.some(e => e.dynamic)) {
+    reasons.push('hay EXEC SQL/CICS dinámicos: el recurso real solo se conoce en ejecución')
+  }
   return { level: reasons.length > 0 ? 'partial' : 'verified', reasons }
 }
 
@@ -47,8 +50,10 @@ function renderField(field: SchemaField, depth: number, out: string[]): void {
   }
 
   const parts = [`${indent}${String(field.level).padStart(2, '0')} ${field.name}`]
+  if (field.dataSection) parts.push(`sección ${field.dataSection}`)
   if (field.picture) parts.push(`PIC ${field.picture}`)
   if (field.usage) parts.push(`USAGE ${field.usage}`)
+  if (field.value !== undefined) parts.push(`VALUE ${field.value} (valor inicial)`)
   if (field.occurs !== undefined) parts.push(`OCCURS ${field.occurs}`)
   if (field.occursDepending) {
     parts.push(
@@ -193,7 +198,8 @@ export function renderFacts(
         const where = exec.paragraph
           ? ` (${exec.paragraph}${exec.paragraphImplicit ? ' — entrada implícita' : ''})`
           : ' (DATA DIVISION)'
-        out.push(`  - L${exec.line}${where}: ${exec.text}`)
+        const dyn = exec.dynamic ? ' [DINÁMICO: recurso/tabla real solo se conoce en ejecución]' : ''
+        out.push(`  - L${exec.line}${where}: ${exec.text}${dyn}`)
       }
     }
   }
@@ -226,6 +232,13 @@ export function renderFacts(
     gaps.push(
       `${op.verb} ${op.target} en L${op.line}: no hay SELECT ni FD que diga a qué fichero corresponde.`,
     )
+  }
+  for (const exec of inventory?.execs ?? []) {
+    if (exec.dynamic) {
+      gaps.push(
+        `EXEC ${exec.kind.toUpperCase()} ${exec.verb} en L${exec.line}: el recurso (tabla o fichero/programa CICS) es una variable, no se conoce en el fuente.`,
+      )
+    }
   }
   if (gaps.length > 0) {
     out.push('')

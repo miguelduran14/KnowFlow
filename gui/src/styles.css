@@ -376,6 +376,17 @@ body,
   color: var(--warn);
 }
 
+.pill--section {
+  border-color: var(--ok);
+  color: var(--ok);
+  letter-spacing: 0.04em;
+}
+
+.pill--dynamic {
+  border-color: var(--missing);
+  color: var(--missing);
+}
+
 /* ── Panel de explicación ─────────────────────────────── */
 
 .explain {

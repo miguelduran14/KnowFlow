@@ -1,4 +1,11 @@
-import type { ConditionValue, OccursDepending, ParseResult, RenamesGroup, SchemaField } from './types.js'
+import type {
+  ConditionValue,
+  DataSection,
+  OccursDepending,
+  ParseResult,
+  RenamesGroup,
+  SchemaField,
+} from './types.js'
 import { alignmentOf, parsePic, usageImpliesFixedSize } from './pic.js'
 import { joinContinuations } from './lines.js'
 import { resolveCopies } from './copy-resolver.js'
@@ -14,6 +21,7 @@ interface RawField {
   occursDepending?: OccursDepending | undefined
   signSeparate?: boolean | undefined
   synchronized?: boolean | undefined
+  value?: string | undefined
 }
 
 interface RawCondition {
@@ -34,7 +42,12 @@ interface RawUnresolvedCopy {
   member: string
 }
 
-type RawStatement = RawField | RawCondition | RawRenames | RawUnresolvedCopy
+interface RawSectionMarker {
+  kind: 'section'
+  section: DataSection
+}
+
+type RawStatement = RawField | RawCondition | RawRenames | RawUnresolvedCopy | RawSectionMarker
 
 const LEVEL_RE = /^(\d{1,2})\s+([\w-]+)/
 // El punto es ambiguo en COBOL: dentro de un PIC editado (PIC ZZ,ZZ9.99)
@@ -51,6 +64,15 @@ const SIGN_SEPARATE_RE = /SIGN\s+IS\s+(?:LEADING|TRAILING)\s+SEPARATE/i
 const SYNC_RE = /(?<![\w-])(?:SYNCHRONIZED|SYNC)(?![\w-])/i
 const RENAMES_RE = /(?<![\w-])RENAMES\s+([\w-]+)(?:\s+(?:THRU|THROUGH)\s+([\w-]+))?/i
 const VALUE_RE = /VALUES?\s+(?:IS\s+|ARE\s+)?(.+)$/i
+// VALUE de un campo normal: un solo literal, constante figurativa o número,
+// con un ALL opcional delante. Se lee del texto SIN enmascarar para
+// conservar el literal real.
+const VALUE_FIELD_RE =
+  /(?<![\w-])VALUES?\s+(?:IS\s+)?(ALL\s+)?('[^']*'|"[^"]*"|[+-]?\d+(?:\.\d+)?|[A-Za-z][\w-]*)/i
+// Cabecera de sección de la DATA DIVISION. Solo las cuatro de almacenamiento
+// de datos; REPORT/SCREEN caen fuera del subconjunto y dejan la sección sin
+// determinar en vez de mal etiquetada.
+const DATA_SECTION_RE = /^\s*(FILE|WORKING-STORAGE|LOCAL-STORAGE|LINKAGE)\s+SECTION\s*\.\s*$/i
 
 function canonicalUsage(matched: string): string {
   const u = matched.toUpperCase()
@@ -134,6 +156,11 @@ function parseStatement(statement: string): RawStatement | undefined {
   const signSeparate = SIGN_SEPARATE_RE.test(rest)
   const synchronized = SYNC_RE.test(rest)
 
+  // El valor inicial se lee del texto sin enmascarar: es justo el literal
+  // que el enmascarado borra. El `ALL` opcional se conserva verbatim.
+  const valueMatch = VALUE_FIELD_RE.exec(rawRest)
+  const value = valueMatch ? `${valueMatch[1] ?? ''}${valueMatch[2]!}`.trim() : undefined
+
   return {
     kind: 'field',
     level,
@@ -145,6 +172,7 @@ function parseStatement(statement: string): RawStatement | undefined {
     occursDepending,
     signSeparate,
     synchronized,
+    value,
   }
 }
 
@@ -156,8 +184,16 @@ function buildTree(statements: RawStatement[]): SchemaField[] {
   const roots: SchemaField[] = []
   const stack: SchemaField[] = []
   let lastField: SchemaField | undefined
+  // Sección de la DATA DIVISION en curso: se estampa en cada 01/77 raíz
+  // que aparezca a partir de su cabecera.
+  let currentSection: DataSection | undefined
 
   for (const raw of statements) {
+    if (raw.kind === 'section') {
+      currentSection = raw.section
+      continue
+    }
+
     if (raw.kind === 'condition') {
       if (lastField) {
         const conditionValue: ConditionValue = { name: raw.name, values: raw.values }
@@ -210,6 +246,7 @@ function buildTree(statements: RawStatement[]): SchemaField[] {
       if (parent) {
         parent.children.push(field)
       } else {
+        if (currentSection) field.dataSection = currentSection
         roots.push(field)
       }
 
@@ -236,6 +273,7 @@ function buildTree(statements: RawStatement[]): SchemaField[] {
       ...(raw.synchronized || pic?.type === 'pointer' || pic?.type === 'index'
         ? { synchronized: true }
         : {}),
+      ...(raw.value !== undefined ? { value: raw.value } : {}),
     }
 
     while (stack.length > 0 && stack[stack.length - 1]!.level >= raw.level) {
@@ -247,6 +285,9 @@ function buildTree(statements: RawStatement[]): SchemaField[] {
     if (parent) {
       parent.children.push(field)
     } else {
+      // La sección solo se estampa en el registro raíz: los hijos son de
+      // la misma por construcción, y repetirla sería ruido.
+      if (currentSection) field.dataSection = currentSection
       roots.push(field)
     }
 
@@ -413,14 +454,15 @@ function resolveRenames(record: SchemaField): void {
  * OCCURS (fijo y DEPENDING ON reconocido), REDEFINES, niveles 88, niveles
  * 66 RENAMES, USAGE (DISPLAY, COMP, COMP-1, COMP-2, COMP-3, BINARY,
  * PACKED-DECIMAL, POINTER, PROCEDURE-POINTER, FUNCTION-POINTER, INDEX),
- * SYNCHRONIZED con sus bytes de relleno, y resolución de COPY (con
- * REPLACING) y EXEC SQL INCLUDE contra `copybooks`. Un member no aportado
- * en `copybooks` queda como hueco explícito en `records` y listado en
- * `missingCopybooks` — nunca se inventa su estructura.
+ * SYNCHRONIZED con sus bytes de relleno, VALUE como valor inicial, la
+ * sección de la DATA DIVISION de cada 01 (FILE / WORKING-STORAGE /
+ * LOCAL-STORAGE / LINKAGE), y resolución de COPY (con REPLACING) y EXEC
+ * SQL INCLUDE contra `copybooks`. Un member no aportado en `copybooks`
+ * queda como hueco explícito en `records` y listado en `missingCopybooks`
+ * — nunca se inventa su estructura.
  *
- * Fuera del subconjunto, y por tanto ignorado: VALUE en campos que no son
- * nivel 88, JUSTIFIED, BLANK WHEN ZERO, y la sección de la DATA DIVISION
- * de la que viene cada 01 (FILE / WORKING-STORAGE / LINKAGE).
+ * Fuera del subconjunto, y por tanto ignorado: JUSTIFIED, BLANK WHEN ZERO,
+ * y las secciones REPORT/SCREEN (dejan la sección sin determinar).
  */
 export function parse(source: string, copybooks: Map<string, string> = new Map()): ParseResult {
   // Si el fuente es un programa completo, la definición de datos termina
@@ -444,6 +486,13 @@ export function parse(source: string, copybooks: Map<string, string> = new Map()
   for (const item of resolved) {
     if (item.kind === 'unresolved-copy') {
       statements.push({ kind: 'unresolved-copy', member: item.member })
+      continue
+    }
+    // Una cabecera de sección no es un campo, pero marca de dónde vienen
+    // los 01 que la siguen (¿parámetro por LINKAGE, o dato propio?).
+    const sectionMatch = DATA_SECTION_RE.exec(item.statement)
+    if (sectionMatch) {
+      statements.push({ kind: 'section', section: sectionMatch[1]!.toUpperCase() as DataSection })
       continue
     }
     const parsed = parseStatement(item.statement)

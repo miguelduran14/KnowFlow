@@ -165,6 +165,9 @@ export function InventoryPanel({ inventory }: { inventory: Inventory }) {
                         {option}
                       </span>
                     ))}
+                    {/* El recurso es una variable: como una CALL dinámica, se
+                        marca en vez de fingir que se sabe qué toca. */}
+                    {exec.dynamic && <span className="pill pill--dynamic">dinámico</span>}
                   </td>
                   <td className="inv-execs__text">{exec.text}</td>
                 </tr>

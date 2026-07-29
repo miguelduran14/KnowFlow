@@ -133,6 +133,17 @@ futuro no está regalado. La marca/nombre se conserva. Ver ADR-0004.
 Las decisiones cerradas el 2026-07-14 (sesión de grilling) están registradas como ADRs en
 `docs/adr/`. Ante una decisión abierta, pregunta — no la cierres por tu cuenta (`AGENTS.md`).
 
+**2026-07-29 (3) — contexto que faltaba en el esquema y el inventario.** Tercera y última tanda de
+la auditoría, cosas honestas pero incompletas hasta ahora. (a) Cada 01/77 se etiqueta con su
+sección de la DATA DIVISION (`FILE`/`WORKING-STORAGE`/`LOCAL-STORAGE`/`LINKAGE`) — LINKAGE responde
+a "¿qué recibe el programa por parámetro?", de las primeras preguntas del onboarding; un copybook
+suelto sin cabecera deja la sección sin determinar, no la inventa. (b) La cláusula `VALUE` de un
+campo normal se guarda como valor inicial, verbatim (`'HOLA'`, `ZEROS`, `ALL '*'`, `1.05`). (c)
+Los EXEC SQL/CICS con el recurso en una variable se marcan dinámicos, igual que una CALL dinámica:
+SQL `PREPARE`/`EXECUTE` (la sentencia viaja en una host variable) y CICS con `FILE(WS-…)`,
+`PROGRAM(WS-…)`, etc. Bajan la fidelidad a parcial. Con esto se cierra la auditoría de las 13
+construcciones; el parser cubre su subconjunto sin mentir en ninguna.
+
 **2026-07-29 (2) — el flujo cuenta cómo se recorre de verdad el programa.** Segunda tanda de la
 misma auditoría, sobre el grafo de flujo. (a) **Caída natural**: un párrafo que no acaba en
 transferencia incondicional (STOP RUN/GOBACK/EXIT PROGRAM o GO TO fuera de rama) cae en el

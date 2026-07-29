@@ -104,16 +104,45 @@ function cicsCommand(text: string): string {
   return m[2] ? `${m[1]!.toUpperCase()} ${m[2].toUpperCase()}` : m[1]!.toUpperCase()
 }
 
-/** Opciones CICS con valor literal, tal cual: `FILE(CUSTFILE)`, `MAP(MENU1)` */
-function cicsOptions(text: string): string[] {
-  const out: string[] = []
-  for (const m of text.matchAll(/(?<![\w-])([A-Za-z][\w-]*)\s*\(\s*'([^']*)'\s*\)/g)) {
-    out.push(`${m[1]!.toUpperCase()}(${m[2]!})`)
+// Opciones CICS que nombran un recurso: si su valor es un data-name en
+// vez de un literal, el recurso real solo se conoce en ejecución.
+const CICS_RESOURCE_KEYS = new Set([
+  'FILE',
+  'DATASET',
+  'PROGRAM',
+  'MAP',
+  'MAPSET',
+  'TRANSID',
+  'QUEUE',
+  'TSQUEUE',
+  'TDQUEUE',
+  'QNAME',
+])
+
+/**
+ * Opciones CICS con nombre de recurso: literales tal cual (`FILE(CUSTFILE)`)
+ * y, para las opciones de recurso, también los data-name (`FILE(WS-NOMBRE)`)
+ * — estos marcan el bloque como dinámico, porque el recurso real no está en
+ * el fuente. Las opciones sin literal ni recurso (LENGTH(100), RESP(WS-R))
+ * no se listan: no dicen qué toca el programa.
+ */
+function cicsOptions(text: string): { options: string[]; dynamic: boolean } {
+  const options: string[] = []
+  let dynamic = false
+  for (const m of text.matchAll(
+    /(?<![\w-])([A-Za-z][\w-]*)\s*\(\s*(?:'([^']*)'|"([^"]*)"|([A-Za-z][\w-]*))\s*\)/g,
+  )) {
+    const key = m[1]!.toUpperCase()
+    const literal = m[2] ?? m[3]
+    const ident = m[4]
+    if (literal !== undefined) {
+      options.push(`${key}(${literal})`)
+    } else if (ident !== undefined && CICS_RESOURCE_KEYS.has(key)) {
+      options.push(`${key}(${ident.toUpperCase()})`)
+      dynamic = true
+    }
   }
-  for (const m of text.matchAll(/(?<![\w-])([A-Za-z][\w-]*)\s*\(\s*"([^"]*)"\s*\)/g)) {
-    out.push(`${m[1]!.toUpperCase()}(${m[2]!})`)
-  }
-  return unique(out)
+  return { options: unique(options), dynamic }
 }
 
 /** Sentencias SELECT de FILE-CONTROL, cada una unida hasta su punto final */
@@ -447,6 +476,7 @@ function buildExec(
   }
 
   if (kind === 'cics') {
+    const { options, dynamic } = cicsOptions(raw)
     return {
       kind,
       verb: cicsCommand(masked),
@@ -454,20 +484,27 @@ function buildExec(
       line,
       text: raw,
       tables: [],
-      options: cicsOptions(raw),
+      options,
+      ...(dynamic ? { dynamic: true } : {}),
     }
   }
 
   const verbMatch = /(?<![\w-])EXEC\s+SQL\s+([A-Za-z][\w-]*)/i.exec(masked)
+  const verb = verbMatch ? verbMatch[1]!.toUpperCase() : ''
   const cursor = sqlCursor(masked)
+  // SQL dinámico: la sentencia viaja en una host variable, así que no hay
+  // tabla que nombrar en el fuente. Se marca en vez de fingir que no toca
+  // nada (podría tocar cualquier tabla).
+  const dynamic = verb === 'PREPARE' || verb === 'EXECUTE'
   return {
     kind,
-    verb: verbMatch ? verbMatch[1]!.toUpperCase() : '',
+    verb,
     ...location,
     line,
     text: raw,
     tables: sqlTables(masked),
     options: [],
     ...(cursor ? { cursor: cursor.name } : {}),
+    ...(dynamic ? { dynamic: true } : {}),
   }
 }
