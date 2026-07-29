@@ -133,6 +133,20 @@ futuro no está regalado. La marca/nombre se conserva. Ver ADR-0004.
 Las decisiones cerradas el 2026-07-14 (sesión de grilling) están registradas como ADRs en
 `docs/adr/`. Ante una decisión abierta, pregunta — no la cierres por tu cuenta (`AGENTS.md`).
 
+**2026-07-29 (4) — primera validación contra corpus real (AWS CardDemo).** Hasta aquí los tests
+eran fixtures sintéticas mías. Se pasan 7 programas reales de CardDemo (COBOL público MIT, batch +
+CICS online, 400–4200 líneas) por los tres parsers. **Cero crashes**, los layouts de datos
+resuelven limpios con sus copybooks, y el inventario CICS se captura. Pero salta un fallo grande:
+los nombres de párrafo con **prefijo numérico** (`0000-`, `1000-`, `9999-`) —la convención más
+extendida en shops reales— dejaban al parser de flujo viendo 1 párrafo en programas de cientos de
+líneas, porque las regex de cabecera y de destino exigían letra inicial. Corregido: nombres y
+destinos aceptan dígito inicial; un token de solo dígitos (`PERFORM 3 TIMES`) se descarta como
+contador. CBACT01C pasó de 1 a 17 párrafos. *Límite confirmado, no bug:* el parser de flujo no
+expande `COPY` dentro de la PROCEDURE DIVISION, así que los párrafos que vienen de un copybook
+(rutinas de fecha de CardDemo) caen —correctamente— en `missingTargets`. Expandir COPY en el
+procedimiento queda como trabajo futuro. Corpus en scratchpad, no en el repo (licencias de
+terceros): un fixture concreto sería una decisión aparte con atribución.
+
 **2026-07-29 (3) — contexto que faltaba en el esquema y el inventario.** Tercera y última tanda de
 la auditoría, cosas honestas pero incompletas hasta ahora. (a) Cada 01/77 se etiqueta con su
 sección de la DATA DIVISION (`FILE`/`WORKING-STORAGE`/`LOCAL-STORAGE`/`LINKAGE`) — LINKAGE responde

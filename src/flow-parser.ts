@@ -12,24 +12,44 @@ const PROCEDURE_DIVISION_RE = /^\s*PROCEDURE\s+DIVISION/i
 const END_PROGRAM_RE = /^\s*END\s+PROGRAM\b/i
 const TERMINATES_G = /(?<![\w-])(?:STOP\s+RUN|GOBACK|EXIT\s+PROGRAM)(?![\w-])/gi
 
+// Un nombre de párrafo puede empezar por dígito (convención 0000-/1000-),
+// así que los destinos aceptan letra o dígito inicial. Un destino que sea
+// SOLO dígitos (`PERFORM 3 TIMES`) es un contador, no un nombre, y se
+// descarta con isProcedureName.
+const NAME = '[A-Za-z0-9][\\w-]*'
+
 // PERFORM <destino> [THRU <destino>] [<n> TIMES] [UNTIL <cond>]
 // Un PERFORM inline (PERFORM UNTIL/VARYING ... END-PERFORM) no tiene
 // destino: el "target" capturado sería una palabra reservada y se
 // descarta con INLINE_KEYWORDS. La condición UNTIL captura hasta el punto
 // o el fin de línea (greedy) — una condición partida en varias líneas
 // queda truncada a la primera, limitación aceptada del subconjunto.
-const PERFORM_RE = /(?<![\w-])PERFORM\s+([A-Za-z][\w-]*)(?:\s+(?:THRU|THROUGH)\s+([A-Za-z][\w-]*))?(?:\s+(\d+)\s+TIMES)?(?:\s+(UNTIL\s+[^.]+))?/dgi
+const PERFORM_RE = new RegExp(
+  `(?<![\\w-])PERFORM\\s+(${NAME})(?:\\s+(?:THRU|THROUGH)\\s+(${NAME}))?(?:\\s+(\\d+)\\s+TIMES)?(?:\\s+(UNTIL\\s+[^.]+))?`,
+  'dgi',
+)
 const INLINE_KEYWORDS = new Set(['UNTIL', 'VARYING', 'WITH', 'TEST', 'TIMES'])
 
 const CALL_RE = /(?<![\w-])CALL\s+('[^']*'|"[^"]*"|[A-Za-z][\w-]*)/dgi
-const GO_TO_DEPENDING_RE = /(?<![\w-])GO\s+TO\s+((?:[A-Za-z][\w-]*\s+)+)DEPENDING\s+ON\s+([\w-]+)/gi
-const GO_TO_RE = /(?<![\w-])GO\s+TO\s+([A-Za-z][\w-]*)/gi
+const GO_TO_DEPENDING_RE = new RegExp(
+  `(?<![\\w-])GO\\s+TO\\s+((?:${NAME}\\s+)+)DEPENDING\\s+ON\\s+([\\w-]+)`,
+  'gi',
+)
+const GO_TO_RE = new RegExp(`(?<![\\w-])GO\\s+TO\\s+(${NAME})`, 'gi')
 
 // SORT/MERGE ... INPUT PROCEDURE IS <párrafo> [THRU <párrafo>]. Es una
 // transferencia de control real: el compilador ejecuta ese rango por cada
 // registro. Sin ella el párrafo aparece como isla en el diagrama.
-const SORT_PROCEDURE_RE =
-  /(?<![\w-])(INPUT|OUTPUT)\s+PROCEDURE\s+(?:IS\s+)?([A-Za-z][\w-]*)(?:\s+(?:THRU|THROUGH)\s+([A-Za-z][\w-]*))?/dgi
+const SORT_PROCEDURE_RE = new RegExp(
+  `(?<![\\w-])(INPUT|OUTPUT)\\s+PROCEDURE\\s+(?:IS\\s+)?(${NAME})(?:\\s+(?:THRU|THROUGH)\\s+(${NAME}))?`,
+  'dgi',
+)
+
+/** Un destino de PERFORM/GO TO válido: un nombre, no un contador. Un token
+ *  de solo dígitos es el `3` de `PERFORM 3 TIMES`, no un párrafo. */
+function isProcedureName(token: string): boolean {
+  return !/^\d+$/.test(token)
+}
 
 // ── Condicionales ───────────────────────────────────────────────────────
 // El grafo sigue siendo de párrafos: un IF no crea nodo propio, sino que
@@ -303,6 +323,7 @@ export function parseFlow(source: string): FlowResult {
     // SORT/MERGE ... INPUT/OUTPUT PROCEDURE: transferencia de control a un
     // párrafo (o rango THRU), igual de real que un PERFORM.
     for (const m of masked.matchAll(SORT_PROCEDURE_RE)) {
+      if (!isProcedureName(m[2]!)) continue
       const kind = m[1]!.toUpperCase() === 'INPUT' ? 'sort-input' : 'sort-output'
       events.push({
         at: m.index,
@@ -321,6 +342,8 @@ export function parseFlow(source: string): FlowResult {
     for (const m of masked.matchAll(PERFORM_RE)) {
       const target = m[1]!
       if (INLINE_KEYWORDS.has(target.toUpperCase())) continue
+      // `PERFORM 3 TIMES`: el "3" es el contador, no un párrafo destino.
+      if (!isProcedureName(target)) continue
       const condition = groupText(m, 4, body)
       events.push({
         at: m.index,
@@ -361,6 +384,7 @@ export function parseFlow(source: string): FlowResult {
     for (const m of depMatches) {
       const targets = m[1]!.trim().split(/\s+/)
       for (const target of targets) {
+        if (!isProcedureName(target)) continue
         events.push({
           at: m.index,
           rank: 1,
@@ -371,6 +395,7 @@ export function parseFlow(source: string): FlowResult {
     }
     if (depMatches.length === 0) {
       for (const m of masked.matchAll(GO_TO_RE)) {
+        if (!isProcedureName(m[1]!)) continue
         events.push({
           at: m.index,
           rank: 1,

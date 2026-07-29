@@ -1,0 +1,15 @@
+flowchart TD
+  0000_MAIN["0000-MAIN — fin"]
+  1000_INIT["1000-INIT"]
+  2000_PROCESS["2000-PROCESS"]
+  2100_READ["2100-READ"]
+  2100_READ_EXIT["2100-READ-EXIT"]
+  9000_CLEANUP["9000-CLEANUP"]
+  0000_MAIN -->|"PERFORM"| 1000_INIT
+  0000_MAIN -->|"PERFORM UNTIL WS-EOF = 'Y'"| 2000_PROCESS
+  0000_MAIN -->|"PERFORM"| 9000_CLEANUP
+  2000_PROCESS -->|"PERFORM THRU 2100-READ-EXIT"| 2100_READ
+  1000_INIT -.->|"cae en (sin transferencia)"| 2000_PROCESS
+  2000_PROCESS -.->|"cae en (sin transferencia)"| 2100_READ
+  2100_READ -.->|"cae en (sin transferencia)"| 2100_READ_EXIT
+  2100_READ_EXIT -.->|"cae en (sin transferencia)"| 9000_CLEANUP

@@ -60,8 +60,11 @@ export function cleanLines(source: string): SourceLine[] {
   return out
 }
 
-const SECTION_HEADER_RE = /^([A-Za-z][\w-]*)\s+SECTION\s*\.\s*$/
-const PARAGRAPH_HEADER_RE = /^([A-Za-z][\w-]*)\s*\.\s*$/
+// Un nombre de párrafo o sección puede EMPEZAR por dígito: la convención
+// numérica (0000-, 1000-, 9999-) es de las más extendidas en shops reales.
+// Exigir letra inicial dejaba ciego al parser ante esos programas enteros.
+const SECTION_HEADER_RE = /^([A-Za-z0-9][\w-]*)\s+SECTION\s*\.\s*$/
+const PARAGRAPH_HEADER_RE = /^([A-Za-z0-9][\w-]*)\s*\.\s*$/
 
 // Tokens de área A que parecen cabecera de párrafo pero no lo son
 const NON_PARAGRAPH_HEADERS = new Set(['DECLARATIVES', 'END-DECLARATIVES'])

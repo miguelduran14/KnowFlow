@@ -1,0 +1,89 @@
+{
+  "programId": "NUMPARA",
+  "paragraphs": [
+    {
+      "name": "0000-MAIN",
+      "kind": "paragraph",
+      "terminates": true
+    },
+    {
+      "name": "1000-INIT",
+      "kind": "paragraph",
+      "fallsThrough": true
+    },
+    {
+      "name": "2000-PROCESS",
+      "kind": "paragraph",
+      "fallsThrough": true
+    },
+    {
+      "name": "2100-READ",
+      "kind": "paragraph",
+      "fallsThrough": true
+    },
+    {
+      "name": "2100-READ-EXIT",
+      "kind": "paragraph",
+      "fallsThrough": true
+    },
+    {
+      "name": "9000-CLEANUP",
+      "kind": "paragraph"
+    }
+  ],
+  "edges": [
+    {
+      "from": "0000-MAIN",
+      "to": "1000-INIT",
+      "kind": "perform",
+      "line": 9
+    },
+    {
+      "from": "0000-MAIN",
+      "to": "2000-PROCESS",
+      "kind": "perform",
+      "condition": "UNTIL WS-EOF = 'Y'",
+      "line": 10
+    },
+    {
+      "from": "0000-MAIN",
+      "to": "9000-CLEANUP",
+      "kind": "perform",
+      "line": 11
+    },
+    {
+      "from": "2000-PROCESS",
+      "to": "2100-READ",
+      "kind": "perform",
+      "thru": "2100-READ-EXIT",
+      "line": 16
+    },
+    {
+      "from": "1000-INIT",
+      "to": "2000-PROCESS",
+      "kind": "fall-through",
+      "line": 15
+    },
+    {
+      "from": "2000-PROCESS",
+      "to": "2100-READ",
+      "kind": "fall-through",
+      "line": 22
+    },
+    {
+      "from": "2100-READ",
+      "to": "2100-READ-EXIT",
+      "kind": "fall-through",
+      "line": 24
+    },
+    {
+      "from": "2100-READ-EXIT",
+      "to": "9000-CLEANUP",
+      "kind": "fall-through",
+      "line": 26
+    }
+  ],
+  "missingTargets": [],
+  "nestedPrograms": [],
+  "fragment": false
+}
