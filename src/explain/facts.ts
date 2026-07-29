@@ -28,6 +28,9 @@ export function factsFidelity(
     reasons.push(`destinos no encontrados: ${flow.missingTargets.join(', ')}`)
   }
   if (flow?.edges.some(e => e.dynamic)) reasons.push('hay CALL dinámicas sin destino verificable')
+  if (flow && flow.nestedPrograms.length > 0) {
+    reasons.push(`programas anidados sin analizar: ${flow.nestedPrograms.join(', ')}`)
+  }
   if (inventory && inventory.unresolvedFileOps.length > 0) {
     const targets = [...new Set(inventory.unresolvedFileOps.map(o => o.target))]
     reasons.push(`operaciones de E/S sin fichero resuelto: ${targets.join(', ')}`)
@@ -53,12 +56,21 @@ function renderField(field: SchemaField, depth: number, out: string[]): void {
     )
   }
   if (field.redefines) parts.push(`REDEFINES ${field.redefines} (misma memoria)`)
+  if (field.synchronized) parts.push('alineado (SYNC): puede haber bytes de relleno delante')
   parts.push(`${field.lengthInBytes} bytes`)
   parts.push(field.offsetUnknown ? 'offset NO verificable (hueco previo)' : `offset ${field.offset}`)
   out.push(parts.join(' | '))
 
   for (const cond of field.conditionValues ?? []) {
     out.push(`${indent}  88 ${cond.name} = ${cond.values.join(', ')}`)
+  }
+  for (const group of field.renamesGroups ?? []) {
+    const range = group.thru ? `${group.from} THRU ${group.thru}` : group.from
+    const span =
+      group.offset !== undefined && group.lengthInBytes !== undefined
+        ? `${group.lengthInBytes} bytes | offset ${group.offset}`
+        : 'tramo NO resuelto (algún extremo no está en el fuente aportado)'
+    out.push(`${indent}  66 ${group.name} RENAMES ${range} — ${span} (misma memoria)`)
   }
   for (const child of field.children) {
     renderField(child, depth + 1, out)
@@ -194,6 +206,11 @@ export function renderFacts(
   }
   for (const target of flow?.missingTargets ?? []) {
     gaps.push(`El destino ${target} no existe en el fuente aportado.`)
+  }
+  for (const nested of flow?.nestedPrograms ?? []) {
+    gaps.push(
+      `El fuente contiene el programa anidado ${nested}, cuyo flujo NO se ha analizado: no aparece en los párrafos ni en las aristas de arriba.`,
+    )
   }
   for (const edge of flow?.edges ?? []) {
     if (edge.dynamic) {

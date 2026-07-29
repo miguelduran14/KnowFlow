@@ -1,0 +1,131 @@
+{
+  "records": [
+    {
+      "level": 1,
+      "name": "SYNC-REC",
+      "type": "group",
+      "lengthInBytes": 34,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "S-FLAG",
+          "type": "alphanumeric",
+          "picture": "X",
+          "lengthInBytes": 1,
+          "offset": 0,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "S-FULL",
+          "type": "binary",
+          "picture": "S9(8)",
+          "usage": "COMP",
+          "lengthInBytes": 4,
+          "offset": 4,
+          "children": [],
+          "synchronized": true
+        },
+        {
+          "level": 5,
+          "name": "S-HALF",
+          "type": "binary",
+          "picture": "S9(3)",
+          "usage": "COMP",
+          "lengthInBytes": 2,
+          "offset": 8,
+          "children": [],
+          "synchronized": true
+        },
+        {
+          "level": 5,
+          "name": "S-DOUBLE",
+          "type": "float-double",
+          "usage": "COMP-2",
+          "lengthInBytes": 8,
+          "offset": 16,
+          "children": [],
+          "synchronized": true
+        },
+        {
+          "level": 5,
+          "name": "S-PTR",
+          "type": "pointer",
+          "usage": "POINTER",
+          "lengthInBytes": 4,
+          "offset": 24,
+          "children": [],
+          "synchronized": true
+        },
+        {
+          "level": 5,
+          "name": "S-IDX",
+          "type": "index",
+          "usage": "INDEX",
+          "lengthInBytes": 4,
+          "offset": 28,
+          "children": [],
+          "synchronized": true
+        },
+        {
+          "level": 5,
+          "name": "S-TAIL",
+          "type": "alphanumeric",
+          "picture": "X(2)",
+          "lengthInBytes": 2,
+          "offset": 32,
+          "children": []
+        }
+      ],
+      "renamesGroups": [
+        {
+          "name": "S-WHOLE-TAIL",
+          "from": "S-PTR",
+          "thru": "S-TAIL",
+          "offset": 24,
+          "lengthInBytes": 10
+        }
+      ]
+    },
+    {
+      "level": 1,
+      "name": "PLAIN-REC",
+      "type": "group",
+      "lengthInBytes": 10,
+      "offset": 0,
+      "children": [
+        {
+          "level": 5,
+          "name": "P-FLAG",
+          "type": "alphanumeric",
+          "picture": "X",
+          "lengthInBytes": 1,
+          "offset": 0,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "P-PACKED",
+          "type": "packed-decimal",
+          "picture": "S9(7)V99",
+          "usage": "COMP-3",
+          "lengthInBytes": 5,
+          "offset": 1,
+          "children": []
+        },
+        {
+          "level": 5,
+          "name": "P-BIN-NO-SYNC",
+          "type": "binary",
+          "picture": "S9(8)",
+          "usage": "COMP",
+          "lengthInBytes": 4,
+          "offset": 6,
+          "children": []
+        }
+      ]
+    }
+  ],
+  "missingCopybooks": []
+}

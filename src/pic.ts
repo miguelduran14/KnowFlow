@@ -123,6 +123,21 @@ export function parsePic(rawPicture: string | undefined, usage?: string, options
     return { type: 'float-double', picture, totalDigits: 0, decimalDigits: 0, lengthInBytes: 8 }
   }
 
+  // Punteros e índices no llevan PIC: su tamaño lo fija el USAGE. Tamaños
+  // de IBM Enterprise COBOL en AMODE 31, que es el modo por defecto; en
+  // LP64 un POINTER son 8 bytes.
+  if (normalizedUsage === 'POINTER' || normalizedUsage === 'FUNCTIONPOINTER') {
+    return { type: 'pointer', picture, totalDigits: 0, decimalDigits: 0, lengthInBytes: 4 }
+  }
+
+  if (normalizedUsage === 'PROCEDUREPOINTER') {
+    return { type: 'pointer', picture, totalDigits: 0, decimalDigits: 0, lengthInBytes: 8 }
+  }
+
+  if (normalizedUsage === 'INDEX') {
+    return { type: 'index', picture, totalDigits: 0, decimalDigits: 0, lengthInBytes: 4 }
+  }
+
   const expanded = expandPic(picture)
   const classification = classifyPic(expanded)
 
@@ -175,8 +190,35 @@ export function parsePic(rawPicture: string | undefined, usage?: string, options
   }
 }
 
-/** USAGE que no requiere PIC para determinar su tamaño (floats de tamaño fijo) */
+/** USAGE que no requiere PIC para determinar su tamaño (floats, punteros, índices) */
 export function usageImpliesFixedSize(usage?: string): boolean {
   const n = normalizeUsage(usage)
-  return n === 'COMP1' || n === 'COMP2'
+  return (
+    n === 'COMP1' ||
+    n === 'COMP2' ||
+    n === 'POINTER' ||
+    n === 'PROCEDUREPOINTER' ||
+    n === 'FUNCTIONPOINTER' ||
+    n === 'INDEX'
+  )
+}
+
+/**
+ * Frontera de alineación en bytes que exige un campo, o 1 si no exige
+ * ninguna. SYNCHRONIZED alinea los binarios y los flotantes; los punteros
+ * y los índices van alineados siempre, lleven SYNC o no.
+ *
+ * La alineación es relativa al principio del registro 01, y los bytes de
+ * relleno que deja delante no pertenecen a ningún campo — por eso hay que
+ * contarlos para que los offsets siguientes sean ciertos.
+ */
+export function alignmentOf(type: DataType, lengthInBytes: number, synchronized: boolean): number {
+  if (type === 'pointer' || type === 'index') return lengthInBytes >= 8 ? 8 : 4
+  if (!synchronized) return 1
+  if (type === 'float-single') return 4
+  if (type === 'float-double') return 8
+  // Binario: media palabra, palabra o doble palabra según su tamaño.
+  if (type === 'binary') return lengthInBytes >= 8 ? 8 : lengthInBytes >= 4 ? 4 : 2
+  // DISPLAY y COMP-3 no se alinean: SYNC no les afecta.
+  return 1
 }

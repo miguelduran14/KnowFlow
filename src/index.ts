@@ -26,5 +26,6 @@ export type {
   LinkedProgram,
   OccursDepending,
   ParseResult,
+  RenamesGroup,
   SchemaField,
 } from './types.js'

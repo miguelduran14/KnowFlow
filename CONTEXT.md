@@ -133,6 +133,17 @@ futuro no está regalado. La marca/nombre se conserva. Ver ADR-0004.
 Las decisiones cerradas el 2026-07-14 (sesión de grilling) están registradas como ADRs en
 `docs/adr/`. Ante una decisión abierta, pregunta — no la cierres por tu cuenta (`AGENTS.md`).
 
+**2026-07-29 — cerradas las construcciones en las que el parser mentía en silencio.** Auditoría
+del parser contra 13 construcciones sin cubrir. Se corrigen las cinco que daban un número falso
+sin marcarlo, que es lo que ADR-0003 prohíbe: `SYNCHRONIZED` (los bytes de relleno desplazan todo
+lo que sigue; antes se ignoraban), `USAGE POINTER`/`INDEX` (salían como grupo de 0 bytes),
+nivel 66 `RENAMES` (se colaba como hijo del último campo y le borraba la longitud — un registro
+de 5 bytes salía como 2), programas anidados (mezclaban sus párrafos con los del programa
+externo) y `DECLARATIVES` (abría un párrafo de entrada fantasma). Queda pendiente, y **decidido
+que se aborda después**: el flujo no dibuja la caída natural entre párrafos, ni `SORT INPUT/OUTPUT
+PROCEDURE`, ni trata `AT END`/`INVALID KEY` como ramas; y el esquema no dice de qué sección de la
+DATA DIVISION viene cada 01.
+
 **2026-07-28 — el inventario incluye E/S de ficheros, y las aristas de flujo llevan guarda.**
 El spec del grilling solo pedía "inventario de bloques EXEC SQL/CICS". Al construirlo se amplía a
 los **ficheros** (SELECT/ASSIGN + OPEN/READ/WRITE/CLOSE, con los registros del FD para resolver un

@@ -12,6 +12,10 @@ export type DataType =
   | 'binary'
   | 'float-single'
   | 'float-double'
+  /** USAGE POINTER / PROCEDURE-POINTER / FUNCTION-POINTER */
+  | 'pointer'
+  /** USAGE INDEX */
+  | 'index'
   | 'group'
   /** Hueco dejado por un COPY/EXEC SQL INCLUDE cuyo member no se aportó */
   | 'unresolved-copy'
@@ -22,6 +26,27 @@ export interface ConditionValue {
   name: string
   /** Literales/tokens tal como aparecen tras VALUE(S) — incluye THRU sin resolver como rango */
   values: string[]
+}
+
+/**
+ * Un nivel 66 RENAMES: nombre alternativo para un tramo contiguo de campos
+ * del registro. No es almacenamiento nuevo — como REDEFINES, es otra vista
+ * de bytes que ya existen — así que no vive en la jerarquía de `children`.
+ */
+export interface RenamesGroup {
+  /** Nombre del nivel 66 */
+  name: string
+  /** Primer campo del tramo (RENAMES <from>) */
+  from: string
+  /** Último campo del tramo (THRU <thru>), si el rango lo tiene */
+  thru?: string | undefined
+  /**
+   * Offset y longitud resueltos contra el registro. Ausentes si algún
+   * extremo del rango no aparece en el fuente aportado (p. ej. está en un
+   * copybook que falta): no se estiman (ADR-0003).
+   */
+  offset?: number | undefined
+  lengthInBytes?: number | undefined
 }
 
 /** OCCURS ... DEPENDING ON — reconocido y marcado como variable, sin resolver numéricamente */
@@ -57,6 +82,18 @@ export interface SchemaField {
   occursDepending?: OccursDepending | undefined
   /** Niveles 88 asociados a este campo. NUNCA aparecen en `children` */
   conditionValues?: ConditionValue[] | undefined
+  /**
+   * Niveles 66 RENAMES declarados sobre este registro. Como los 88, NUNCA
+   * aparecen en `children`: no son almacenamiento nuevo.
+   */
+  renamesGroups?: RenamesGroup[] | undefined
+  /**
+   * El campo lleva SYNCHRONIZED, o es un POINTER/INDEX (que van alineados
+   * de forma implícita). Su offset se ha redondeado al alto hasta el
+   * límite que le toca, y los bytes de relleno que quedan delante no
+   * pertenecen a ningún campo.
+   */
+  synchronized?: boolean | undefined
   /** Solo si type === 'unresolved-copy': el member de COPY/EXEC SQL INCLUDE que faltó */
   unresolvedCopyMember?: string | undefined
   /**
@@ -252,6 +289,13 @@ export interface FlowResult {
   edges: FlowEdge[]
   /** Destinos de PERFORM/GO TO que no corresponden a ningún párrafo del fuente */
   missingTargets: string[]
+  /**
+   * PROGRAM-ID de los programas anidados dentro de este fuente. Su flujo
+   * NO está en `paragraphs` ni en `edges`: son programas distintos y
+   * mezclarlos daría un grafo que no existe. Se declaran para que quede
+   * dicho que el fuente contiene más de lo que se ha analizado.
+   */
+  nestedPrograms: string[]
   /**
    * true si el fuente no traía cabecera PROCEDURE DIVISION y se parseó
    * como fragmento — nivel de fidelidad "parcialmente verificado"

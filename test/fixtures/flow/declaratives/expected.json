@@ -1,0 +1,46 @@
+{
+  "programId": "DECLPRG",
+  "paragraphs": [
+    {
+      "name": "ERR-SECTION",
+      "kind": "section"
+    },
+    {
+      "name": "ERR-PARA",
+      "kind": "paragraph",
+      "section": "ERR-SECTION"
+    },
+    {
+      "name": "MAIN-SECTION",
+      "kind": "section"
+    },
+    {
+      "name": "MAIN-PARA",
+      "kind": "paragraph",
+      "section": "MAIN-SECTION",
+      "terminates": true
+    },
+    {
+      "name": "LOG-PARA",
+      "kind": "paragraph",
+      "section": "MAIN-SECTION"
+    }
+  ],
+  "edges": [
+    {
+      "from": "ERR-PARA",
+      "to": "LOG-PARA",
+      "kind": "perform",
+      "line": 12
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "LOG-PARA",
+      "kind": "perform",
+      "line": 16
+    }
+  ],
+  "missingTargets": [],
+  "nestedPrograms": [],
+  "fragment": false
+}

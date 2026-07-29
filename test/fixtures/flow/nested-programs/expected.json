@@ -1,0 +1,33 @@
+{
+  "programId": "EXTERNO",
+  "paragraphs": [
+    {
+      "name": "MAIN-PARA",
+      "kind": "paragraph",
+      "terminates": true
+    },
+    {
+      "name": "PREP-PARA",
+      "kind": "paragraph"
+    }
+  ],
+  "edges": [
+    {
+      "from": "MAIN-PARA",
+      "to": "PREP-PARA",
+      "kind": "perform",
+      "line": 8
+    },
+    {
+      "from": "MAIN-PARA",
+      "to": "INTERNO",
+      "kind": "call",
+      "line": 9
+    }
+  ],
+  "missingTargets": [],
+  "nestedPrograms": [
+    "INTERNO"
+  ],
+  "fragment": false
+}

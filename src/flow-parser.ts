@@ -1,5 +1,11 @@
 import type { FlowEdge, FlowParagraph, FlowResult } from './types.js'
-import { cleanLines, groupText, matchHeader, type SourceLine } from './source-lines.js'
+import {
+  cleanLines,
+  groupText,
+  isDeclarativesMarker,
+  matchHeader,
+  type SourceLine,
+} from './source-lines.js'
 
 const PROGRAM_ID_RE = /(?<![\w-])PROGRAM-ID\s*\.\s*([A-Za-z][\w-]*)/i
 const PROCEDURE_DIVISION_RE = /^\s*PROCEDURE\s+DIVISION/i
@@ -74,14 +80,16 @@ function whenGuard(subject: string, value: string): string {
 export function parseFlow(source: string): FlowResult {
   const cleaned = cleanLines(source)
 
-  let programId: string | undefined
-  for (const { masked } of cleaned) {
+  // Todos los PROGRAM-ID del fuente: el primero es este programa, los
+  // demás son programas anidados dentro de él.
+  const programIds: { name: string; line: number }[] = []
+  for (const { masked, line } of cleaned) {
     const m = PROGRAM_ID_RE.exec(masked)
-    if (m) {
-      programId = m[1]!
-      break
-    }
+    if (m) programIds.push({ name: m[1]!, line })
   }
+  const programId = programIds[0]?.name
+  const nestedPrograms = programIds.slice(1).map(p => p.name)
+  const nestedFrom = programIds[1]?.line
 
   let lines: SourceLine[]
   let fragment = false
@@ -161,6 +169,11 @@ export function parseFlow(source: string): FlowResult {
 
   for (const { body, masked, line } of lines) {
     if (END_PROGRAM_RE.test(masked)) break
+    // Un segundo PROGRAM-ID abre un programa anidado: sus párrafos no son
+    // de este programa y mezclarlos daría un flujo que no existe. Se corta
+    // aquí y el anidado se declara como límite, no se parsea a medias.
+    if (nestedFrom !== undefined && line >= nestedFrom) break
+    if (isDeclarativesMarker(masked)) continue
 
     const header = matchHeader(masked)
     if (header) {
@@ -380,6 +393,7 @@ export function parseFlow(source: string): FlowResult {
     paragraphs,
     edges,
     missingTargets,
+    nestedPrograms,
     fragment,
   }
 }

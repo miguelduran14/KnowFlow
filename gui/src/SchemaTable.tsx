@@ -16,6 +16,9 @@ function FieldRows({ field, depth }: { field: SchemaField; depth: number }) {
               {field.occursDepending.dependingOn}
             </span>
           )}
+          {/* Los bytes de relleno que la alineación deja delante no son de
+              ningún campo: sin la marca, el salto de offset parece un error. */}
+          {field.synchronized && <span className="pill pill--warn">alineado</span>}
         </td>
         <td>{isGap ? '—' : String(field.level).padStart(2, '0')}</td>
         <td>
@@ -39,6 +42,21 @@ function FieldRows({ field, depth }: { field: SchemaField; depth: number }) {
       ))}
       {field.children.map((child, i) => (
         <FieldRows key={`${child.name}-${i}`} field={child} depth={depth + 1} />
+      ))}
+      {(field.renamesGroups ?? []).map(group => (
+        <tr key={group.name} className="row--cond">
+          <td className="cell-name" style={{ paddingLeft: 10 + (depth + 1) * 18 }}>
+            66 {group.name}
+            <span className="pill pill--redefines">
+              RENAMES {group.from}
+              {group.thru ? ` THRU ${group.thru}` : ''}
+            </span>
+          </td>
+          <td>66</td>
+          <td colSpan={2}>misma memoria</td>
+          <td className="cell-num">{group.lengthInBytes ?? '?'}</td>
+          <td className="cell-num">{group.offset ?? '?'}</td>
+        </tr>
       ))}
     </Fragment>
   )

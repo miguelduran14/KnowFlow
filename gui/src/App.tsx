@@ -207,6 +207,11 @@ export function App() {
               Destinos no encontrados: {flow.missingTargets.join(', ')}
             </span>
           )}
+          {flow && flow.nestedPrograms.length > 0 && (
+            <span className="notice notice--warn">
+              ⚠ Programas anidados sin analizar: {flow.nestedPrograms.join(', ')}
+            </span>
+          )}
           {data && data.missingCopybooks.length > 0 && (
             <span className="notice notice--missing">
               Copybooks ausentes: {data.missingCopybooks.join(', ')}

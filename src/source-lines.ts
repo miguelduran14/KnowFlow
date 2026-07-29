@@ -66,6 +66,15 @@ const PARAGRAPH_HEADER_RE = /^([A-Za-z][\w-]*)\s*\.\s*$/
 // Tokens de área A que parecen cabecera de párrafo pero no lo son
 const NON_PARAGRAPH_HEADERS = new Set(['DECLARATIVES', 'END-DECLARATIVES'])
 
+/**
+ * `DECLARATIVES.` y `END-DECLARATIVES.` delimitan la zona de manejadores.
+ * No son cabeceras de párrafo, pero tampoco sentencias: tratarlas como
+ * sentencia abriría un párrafo de entrada implícito que no existe.
+ */
+export function isDeclarativesMarker(masked: string): boolean {
+  return /^\s*(?:END-)?DECLARATIVES\s*\.\s*$/i.test(masked)
+}
+
 /** Cabecera de párrafo/sección: un solo token + punto, arrancando en área A
  *  (columnas 8-11). Las sentencias van en área B (columna 12+), así que la
  *  indentación distingue "PARRAFO." de una sentencia de un solo verbo. */

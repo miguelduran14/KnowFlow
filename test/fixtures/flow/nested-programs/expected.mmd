@@ -1,0 +1,7 @@
+flowchart TD
+  NOTA_ANIDADOS["⚠ Programas anidados sin analizar: INTERNO"]
+  MAIN_PARA["MAIN-PARA — fin"]
+  PREP_PARA["PREP-PARA"]
+  INTERNO[["INTERNO"]]
+  MAIN_PARA -->|"PERFORM"| PREP_PARA
+  MAIN_PARA -->|"CALL"| INTERNO

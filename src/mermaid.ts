@@ -52,6 +52,12 @@ export function flowToMermaid(flow: FlowResult): string {
     out.push('  NOTA_FRAGMENTO["⚠ Fragmento sin PROCEDURE DIVISION — parcialmente verificado"]')
   }
 
+  if (flow.nestedPrograms.length > 0) {
+    out.push(
+      `  NOTA_ANIDADOS["⚠ Programas anidados sin analizar: ${escapeLabel(flow.nestedPrograms.join(', '))}"]`,
+    )
+  }
+
   const declared = new Set<string>()
 
   for (const para of flow.paragraphs) {

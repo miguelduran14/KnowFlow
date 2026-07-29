@@ -1,5 +1,5 @@
-import type { ConditionValue, OccursDepending, ParseResult, SchemaField } from './types.js'
-import { parsePic, usageImpliesFixedSize } from './pic.js'
+import type { ConditionValue, OccursDepending, ParseResult, RenamesGroup, SchemaField } from './types.js'
+import { alignmentOf, parsePic, usageImpliesFixedSize } from './pic.js'
 import { joinContinuations } from './lines.js'
 import { resolveCopies } from './copy-resolver.js'
 
@@ -13,6 +13,7 @@ interface RawField {
   occurs?: number | undefined
   occursDepending?: OccursDepending | undefined
   signSeparate?: boolean | undefined
+  synchronized?: boolean | undefined
 }
 
 interface RawCondition {
@@ -21,12 +22,19 @@ interface RawCondition {
   values: string[]
 }
 
+interface RawRenames {
+  kind: 'renames'
+  name: string
+  from: string
+  thru?: string | undefined
+}
+
 interface RawUnresolvedCopy {
   kind: 'unresolved-copy'
   member: string
 }
 
-type RawStatement = RawField | RawCondition | RawUnresolvedCopy
+type RawStatement = RawField | RawCondition | RawRenames | RawUnresolvedCopy
 
 const LEVEL_RE = /^(\d{1,2})\s+([\w-]+)/
 // El punto es ambiguo en COBOL: dentro de un PIC editado (PIC ZZ,ZZ9.99)
@@ -34,10 +42,14 @@ const LEVEL_RE = /^(\d{1,2})\s+([\w-]+)/
 // resolvemos con un lookahead: si al punto le sigue un dígito o carácter
 // de edición (Z, 9, *, etc.), es parte de la PIC.
 const PIC_RE = /PIC(?:TURE)?\s+IS\s+([\w()V,\-+*/]+(?:\.(?=[0-9Z*+\-])[\w()V,\-+*/]+)*)|PIC(?:TURE)?\s+([\w()V,\-+*/]+(?:\.(?=[0-9Z*+\-])[\w()V,\-+*/]+)*)/i
-const USAGE_RE = /(?:USAGE\s+IS\s+|USAGE\s+)?\b(COMPUTATIONAL-3|COMPUTATIONAL-2|COMPUTATIONAL-1|COMPUTATIONAL|COMP-3|COMP-2|COMP-1|COMP|BINARY|PACKED-DECIMAL|DISPLAY)\b/i
+// El orden importa: las alternativas más largas van primero para que
+// PROCEDURE-POINTER no se lea como POINTER.
+const USAGE_RE = /(?:USAGE\s+IS\s+|USAGE\s+)?\b(COMPUTATIONAL-3|COMPUTATIONAL-2|COMPUTATIONAL-1|COMPUTATIONAL|COMP-3|COMP-2|COMP-1|COMP|BINARY|PACKED-DECIMAL|PROCEDURE-POINTER|FUNCTION-POINTER|POINTER|INDEX|DISPLAY)\b/i
 const REDEFINES_RE = /REDEFINES\s+([\w-]+)/i
 const OCCURS_RE = /OCCURS\s+(\d+)(?:\s+TO\s+(\d+))?\s+TIMES(?:\s+DEPENDING\s+ON\s+([\w-]+))?/i
 const SIGN_SEPARATE_RE = /SIGN\s+IS\s+(?:LEADING|TRAILING)\s+SEPARATE/i
+const SYNC_RE = /(?<![\w-])(?:SYNCHRONIZED|SYNC)(?![\w-])/i
+const RENAMES_RE = /(?<![\w-])RENAMES\s+([\w-]+)(?:\s+(?:THRU|THROUGH)\s+([\w-]+))?/i
 const VALUE_RE = /VALUES?\s+(?:IS\s+|ARE\s+)?(.+)$/i
 
 function canonicalUsage(matched: string): string {
@@ -48,6 +60,10 @@ function canonicalUsage(matched: string): string {
   if (u === 'COMPUTATIONAL' || u === 'COMP') return 'COMP'
   if (u === 'PACKED-DECIMAL') return 'PACKED-DECIMAL'
   if (u === 'BINARY') return 'BINARY'
+  if (u === 'POINTER') return 'POINTER'
+  if (u === 'PROCEDURE-POINTER') return 'PROCEDURE-POINTER'
+  if (u === 'FUNCTION-POINTER') return 'FUNCTION-POINTER'
+  if (u === 'INDEX') return 'INDEX'
   return 'DISPLAY'
 }
 
@@ -69,11 +85,26 @@ function parseStatement(statement: string): RawStatement | undefined {
   // buscaran en la sentencia completa, un nombre de campo que contenga una
   // palabra reservada como componente (p. ej. "SIGNED-DISPLAY") produciría
   // una cláusula inventada que no está en el fuente.
-  const rest = stmt.slice(levelMatch[0].length)
+  const rawRest = stmt.slice(levelMatch[0].length)
 
   if (level === 88) {
-    return { kind: 'condition', name, values: parseConditionValues(rest) }
+    return { kind: 'condition', name, values: parseConditionValues(rawRest) }
   }
+
+  // Un nivel 66 no es un nivel jerárquico: no puede ser hijo de nada ni
+  // tener hijos. Metido en el árbol quedaría colgando del último campo
+  // elemental y le borraría la longitud, porque un campo con hijos toma
+  // la de sus hijos.
+  if (level === 66) {
+    const renames = RENAMES_RE.exec(rawRest)
+    if (!renames) return undefined
+    return { kind: 'renames', name, from: renames[1]!, ...(renames[2] ? { thru: renames[2] } : {}) }
+  }
+
+  // El contenido de un literal no es una cláusula: sin esto, un
+  // `VALUE 'INDEX'` fabricaría un USAGE que el campo no tiene (ADR-0003).
+  // Se conserva la longitud para no descuadrar nada que use posiciones.
+  const rest = rawRest.replace(/'[^']*'|"[^"]*"/g, m => ' '.repeat(m.length))
 
   const picMatch = PIC_RE.exec(rest)
   const picture = picMatch?.[1] ?? picMatch?.[2]
@@ -101,8 +132,20 @@ function parseStatement(statement: string): RawStatement | undefined {
   }
 
   const signSeparate = SIGN_SEPARATE_RE.test(rest)
+  const synchronized = SYNC_RE.test(rest)
 
-  return { kind: 'field', level, name, picture, usage, redefines, occurs, occursDepending, signSeparate }
+  return {
+    kind: 'field',
+    level,
+    name,
+    picture,
+    usage,
+    redefines,
+    occurs,
+    occursDepending,
+    signSeparate,
+    synchronized,
+  }
 }
 
 /**
@@ -119,6 +162,22 @@ function buildTree(statements: RawStatement[]): SchemaField[] {
       if (lastField) {
         const conditionValue: ConditionValue = { name: raw.name, values: raw.values }
         lastField.conditionValues = [...(lastField.conditionValues ?? []), conditionValue]
+      }
+      continue
+    }
+
+    if (raw.kind === 'renames') {
+      // Un 66 renombra un tramo del registro 01 que acaba de describirse,
+      // así que cuelga del último registro raíz — no de la pila, donde
+      // sería un hijo y falsearía longitudes.
+      const record = roots[roots.length - 1]
+      if (record) {
+        const group: RenamesGroup = {
+          name: raw.name,
+          from: raw.from,
+          ...(raw.thru ? { thru: raw.thru } : {}),
+        }
+        record.renamesGroups = [...(record.renamesGroups ?? []), group]
       }
       continue
     }
@@ -173,6 +232,10 @@ function buildTree(statements: RawStatement[]): SchemaField[] {
       ...(raw.redefines ? { redefines: raw.redefines } : {}),
       ...(raw.occurs !== undefined ? { occurs: raw.occurs } : {}),
       ...(raw.occursDepending ? { occursDepending: raw.occursDepending } : {}),
+      // Los punteros e índices van alineados aunque no lleven SYNC escrito.
+      ...(raw.synchronized || pic?.type === 'pointer' || pic?.type === 'index'
+        ? { synchronized: true }
+        : {}),
     }
 
     while (stack.length > 0 && stack[stack.length - 1]!.level >= raw.level) {
@@ -192,6 +255,22 @@ function buildTree(statements: RawStatement[]): SchemaField[] {
   }
 
   return roots
+}
+
+/**
+ * Alineación que exige un campo: la suya si es elemental, la mayor de su
+ * contenido si es grupo. No toca nada — se consulta antes de colocar el
+ * campo, cuando sus longitudes finales aún no están calculadas.
+ */
+function requiredAlignment(field: SchemaField): number {
+  if (field.children.length === 0) {
+    return alignmentOf(field.type, field.lengthInBytes, field.synchronized === true)
+  }
+  let max = 1
+  for (const child of field.children) {
+    max = Math.max(max, requiredAlignment(child))
+  }
+  return max
 }
 
 /**
@@ -221,18 +300,42 @@ function buildTree(statements: RawStatement[]): SchemaField[] {
  * en ese mismo nivel — y, si un grupo contiene un hueco en su interior, el
  * propio grupo (y sus hermanos posteriores en el nivel padre) hereda la
  * marca también, porque su longitud total ya no es fiable.
+ *
+ * SYNCHRONIZED (y los punteros/índices, alineados de forma implícita):
+ * el offset se redondea al alto hasta la frontera que exige el campo,
+ * medida desde el principio del registro 01. Los bytes de relleno que
+ * quedan delante no son de nadie, pero sí desplazan todo lo que sigue.
+ * Un grupo hereda la mayor alineación de su contenido, y si además lleva
+ * OCCURS su longitud se redondea para que cada ocurrencia empiece
+ * alineada — que es lo que reserva el compilador.
+ *
+ * Devuelve también `alignment`: lo que el nivel entero exige, para que el
+ * padre lo herede.
  */
-function resolveOffsets(fields: SchemaField[], baseOffset: number): { length: number; hasUnknown: boolean } {
+function resolveOffsets(
+  fields: SchemaField[],
+  baseOffset: number,
+): { length: number; hasUnknown: boolean; alignment: number } {
   let offset = baseOffset
   let clusterMaxLength = 0
   let offsetUnknownFromHere = false
   let anyUnknown = false
+  let groupAlignment = 1
 
   for (const field of fields) {
+    // Hay que saber qué alineación exige el campo ANTES de colocarlo, y
+    // para un grupo eso depende de su contenido. Se mira sin resolver:
+    // resolver dos veces aplicaría dos veces el `*= occurs`.
+    const ownAlignment = requiredAlignment(field)
+    groupAlignment = Math.max(groupAlignment, ownAlignment)
+
     if (field.redefines) {
       field.offset = offset
     } else {
       offset += clusterMaxLength
+      if (ownAlignment > 1 && offset % ownAlignment !== 0) {
+        offset += ownAlignment - (offset % ownAlignment)
+      }
       field.offset = offset
       clusterMaxLength = 0
     }
@@ -246,9 +349,15 @@ function resolveOffsets(fields: SchemaField[], baseOffset: number): { length: nu
     }
 
     if (field.children.length > 0) {
-      const childResult = resolveOffsets(field.children, field.offset)
-      field.lengthInBytes = childResult.length
-      if (childResult.hasUnknown) {
+      const placed = resolveOffsets(field.children, field.offset)
+      field.lengthInBytes = placed.length
+      // Cada ocurrencia de un OCCURS tiene que empezar alineada, así que
+      // el compilador rellena el final del grupo hasta el múltiplo.
+      if (field.occurs !== undefined && placed.alignment > 1) {
+        const remainder = field.lengthInBytes % placed.alignment
+        if (remainder !== 0) field.lengthInBytes += placed.alignment - remainder
+      }
+      if (placed.hasUnknown) {
         field.offsetUnknown = true
         offsetUnknownFromHere = true
       }
@@ -270,17 +379,48 @@ function resolveOffsets(fields: SchemaField[], baseOffset: number): { length: nu
   }
 
   offset += clusterMaxLength
-  return { length: offset - baseOffset, hasUnknown: anyUnknown }
+  return { length: offset - baseOffset, hasUnknown: anyUnknown, alignment: groupAlignment }
 }
 
 /**
- * Parsea un copybook COBOL trivial y extrae su esquema de campos.
- * Alcance de T1+T2+T3: niveles jerárquicos, PIC X/9, OCCURS (fijo y
- * DEPENDING ON reconocido), REDEFINES, niveles 88, USAGE (DISPLAY, COMP,
- * COMP-1, COMP-2, COMP-3, BINARY, PACKED-DECIMAL), y resolución de COPY
- * (con REPLACING) y EXEC SQL INCLUDE contra `copybooks`. Un member no
- * aportado en `copybooks` queda como hueco explícito en `records` y
- * listado en `missingCopybooks` — nunca se inventa su estructura.
+ * Resuelve el offset y la longitud de cada nivel 66 contra el registro ya
+ * calculado. Si algún extremo del rango no aparece en el fuente aportado
+ * —está en un copybook que falta, por ejemplo— se deja sin resolver en vez
+ * de estimarlo (ADR-0003).
+ */
+function resolveRenames(record: SchemaField): void {
+  const byName = new Map<string, SchemaField>()
+  const collect = (field: SchemaField): void => {
+    byName.set(field.name.toUpperCase(), field)
+    for (const child of field.children) collect(child)
+  }
+  collect(record)
+
+  for (const group of record.renamesGroups ?? []) {
+    const from = byName.get(group.from.toUpperCase())
+    const thru = group.thru ? byName.get(group.thru.toUpperCase()) : from
+    if (!from || !thru) continue
+    if (from.offsetUnknown || thru.offsetUnknown) continue
+    group.offset = from.offset
+    group.lengthInBytes = thru.offset + thru.lengthInBytes - from.offset
+  }
+}
+
+/**
+ * Parsea un copybook COBOL y extrae su esquema de campos.
+ *
+ * Subconjunto cubierto: niveles jerárquicos, PIC (incluidos los editados),
+ * OCCURS (fijo y DEPENDING ON reconocido), REDEFINES, niveles 88, niveles
+ * 66 RENAMES, USAGE (DISPLAY, COMP, COMP-1, COMP-2, COMP-3, BINARY,
+ * PACKED-DECIMAL, POINTER, PROCEDURE-POINTER, FUNCTION-POINTER, INDEX),
+ * SYNCHRONIZED con sus bytes de relleno, y resolución de COPY (con
+ * REPLACING) y EXEC SQL INCLUDE contra `copybooks`. Un member no aportado
+ * en `copybooks` queda como hueco explícito en `records` y listado en
+ * `missingCopybooks` — nunca se inventa su estructura.
+ *
+ * Fuera del subconjunto, y por tanto ignorado: VALUE en campos que no son
+ * nivel 88, JUSTIFIED, BLANK WHEN ZERO, y la sección de la DATA DIVISION
+ * de la que viene cada 01 (FILE / WORKING-STORAGE / LINKAGE).
  */
 export function parse(source: string, copybooks: Map<string, string> = new Map()): ParseResult {
   // Si el fuente es un programa completo, la definición de datos termina
@@ -317,6 +457,7 @@ export function parse(source: string, copybooks: Map<string, string> = new Map()
   // internos son relativos a su propio inicio, no continúan entre records.
   for (const root of roots) {
     resolveOffsets([root], 0)
+    resolveRenames(root)
   }
 
   return { records: roots, missingCopybooks }
