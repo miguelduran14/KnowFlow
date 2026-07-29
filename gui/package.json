@@ -11,6 +11,7 @@
   "dependencies": {
     "@xyflow/react": "^12.8.1",
     "elkjs": "^0.11.0",
+    "framer-motion": "^12.43.0",
     "knowflow": "file:..",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
