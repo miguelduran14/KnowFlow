@@ -2,10 +2,14 @@
   box-sizing: border-box;
 }
 
+/* ── Sistema de diseño D (híbrido "Ficha técnica + Consola") ──────────
+   Dual-theme: oscuro = glow de consola; claro = papel milimetrado.
+   El oscuro es el hogar de la app (defecto); el claro entra si el SO lo
+   pide o si el usuario lo fuerza con el toggle (data-theme).
+   Mint = acento, violeta = condicionales, ámbar = aviso, rosa = dinámico. */
 :root {
-  /* Sistema de diseño D (variante consola oscura): mint como acento,
-     violeta para condicionales, ámbar aviso, rosa dinámico/límite. */
   --bg: #0b0e14;
+  --sheet: #151a21;
   --bg-panel: #12161d;
   --bg-raised: #1b212b;
   --border: #262e3a;
@@ -16,12 +20,81 @@
   --warn: #e0b25e;
   --missing: #f0708a;
   --ok: #6fcf97;
-  --mint-soft: rgba(63, 217, 180, 0.12);
+  --mint-soft: rgba(63, 217, 180, 0.13);
+  --grid: transparent;
+  --glow: rgba(63, 217, 180, 0.16);
   --raise: 0 1px 0 rgba(255, 255, 255, 0.03), 0 8px 26px rgba(0, 0, 0, 0.5);
   --well: inset 0 2px 10px rgba(0, 0, 0, 0.45);
   --edge: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+/* Claro = papel milimetrado. Se aplica si el SO lo pide y el usuario no ha
+   forzado el oscuro; el toggle (data-theme) gana siempre por debajo. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #eef1ea;
+    --sheet: #fbfcf8;
+    --bg-panel: #f3f5ee;
+    --bg-raised: #f8f9f4;
+    --border: #dde0d6;
+    --text: #1b2430;
+    --text-dim: #616b78;
+    --accent: #12a487;
+    --violet: #6a58d8;
+    --warn: #a9772e;
+    --missing: #bd4f66;
+    --ok: #3e8e5a;
+    --mint-soft: rgba(18, 164, 135, 0.12);
+    --grid: #dee2d6;
+    --glow: transparent;
+    --raise: 0 1px 2px rgba(20, 26, 38, 0.05), 0 4px 14px rgba(20, 26, 38, 0.07);
+    --well: inset 0 2px 6px rgba(20, 26, 38, 0.1);
+    --edge: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+}
+
+:root[data-theme="light"] {
+  --bg: #eef1ea;
+  --sheet: #fbfcf8;
+  --bg-panel: #f3f5ee;
+  --bg-raised: #f8f9f4;
+  --border: #dde0d6;
+  --text: #1b2430;
+  --text-dim: #616b78;
+  --accent: #12a487;
+  --violet: #6a58d8;
+  --warn: #a9772e;
+  --missing: #bd4f66;
+  --ok: #3e8e5a;
+  --mint-soft: rgba(18, 164, 135, 0.12);
+  --grid: #dee2d6;
+  --glow: transparent;
+  --raise: 0 1px 2px rgba(20, 26, 38, 0.05), 0 4px 14px rgba(20, 26, 38, 0.07);
+  --well: inset 0 2px 6px rgba(20, 26, 38, 0.1);
+  --edge: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+:root[data-theme="dark"] {
+  --bg: #0b0e14;
+  --sheet: #151a21;
+  --bg-panel: #12161d;
+  --bg-raised: #1b212b;
+  --border: #262e3a;
+  --text: #e6ebf2;
+  --text-dim: #828d9e;
+  --accent: #3fd9b4;
+  --violet: #8b7bf0;
+  --warn: #e0b25e;
+  --missing: #f0708a;
+  --ok: #6fcf97;
+  --mint-soft: rgba(63, 217, 180, 0.13);
+  --grid: transparent;
+  --glow: rgba(63, 217, 180, 0.16);
+  --raise: 0 1px 0 rgba(255, 255, 255, 0.03), 0 8px 26px rgba(0, 0, 0, 0.5);
+  --well: inset 0 2px 10px rgba(0, 0, 0, 0.45);
+  --edge: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 html,
@@ -38,15 +111,36 @@ body,
   display: flex;
   flex-direction: column;
   height: 100%;
+  /* Fondo con personalidad por tema: glow radial arriba-derecha (oscuro) +
+     rejilla de papel milimetrado (claro). Los tokens --glow/--grid apagan
+     el que no toca, así que la misma regla sirve para ambos temas. */
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(680px 520px at 100% -60px, var(--glow), transparent 62%),
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: auto, 23px 23px, 23px 23px;
+  background-repeat: no-repeat, repeat, repeat;
 }
 
 .topbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 18px;
-  background: var(--bg-panel);
+  padding: 12px 20px;
+  background: color-mix(in srgb, var(--bg-panel) 78%, transparent);
+  backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--border);
+}
+
+/* Filo de acento mint arriba de la barra: la firma de la "ficha" de D. */
+.topbar::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent 55%);
 }
 
 .brand {
@@ -56,19 +150,26 @@ body,
 }
 
 .brand__name {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.brand__name::first-letter {
   color: var(--accent);
 }
 
 .brand__tag {
-  font-size: 12px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
   color: var(--text-dim);
 }
 
 .actions {
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
@@ -76,14 +177,17 @@ body,
   background: var(--bg-raised);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 6px 14px;
   font-size: 13px;
   cursor: pointer;
+  box-shadow: var(--edge);
+  transition: border-color 0.15s, transform 0.15s;
 }
 
 .actions button:hover:not(:disabled) {
   border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .actions button:disabled {
@@ -91,21 +195,117 @@ body,
   cursor: default;
 }
 
+/* Toggle de tema (sol/luna), redondo, en la barra de acciones. */
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  border-radius: 999px;
+}
+
+/* ── Banda de identidad del programa (la "ficha" de D) ──────────────── */
 .notices {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
-  padding: 8px 18px;
-  background: var(--bg-panel);
+  padding: 11px 20px;
+  background: color-mix(in srgb, var(--bg-panel) 55%, transparent);
   border-bottom: 1px solid var(--border);
+}
+
+/* PROGRAM-ID con punto pulsante — lo primero que identifica el fuente. */
+.ident {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  padding-right: 4px;
+}
+
+.ident__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 var(--accent);
+  animation: ident-pulse 2.6s infinite;
+}
+
+.ident__label {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+@keyframes ident-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* Celdas de conteo: párrafos · ficheros · tablas. Tabulares, elevadas. */
+.specs {
+  display: flex;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--raise), var(--edge);
+  overflow: hidden;
+}
+
+.specs__cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  padding: 5px 13px;
+  border-right: 1px solid var(--border);
+}
+
+.specs__cell:last-child {
+  border-right: none;
+}
+
+.specs__cell b {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.specs__cell span {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
 }
 
 .notice {
   font-size: 12px;
-  padding: 3px 10px;
+  padding: 3px 11px;
   border-radius: 999px;
   border: 1px solid var(--border);
   color: var(--text-dim);
+  background: var(--bg-raised);
+  box-shadow: var(--edge);
 }
 
 .notice--warn {
@@ -123,11 +323,18 @@ body,
   grid-template-columns: minmax(280px, 1fr) 2fr;
   flex: 1;
   min-height: 0;
+  gap: 14px;
+  padding: 14px;
 }
 
+/* Editor y panel como "hojas" elevadas sobre el fondo (grid/glow). */
 .editor {
-  border-right: 1px solid var(--border);
   display: flex;
+  background: var(--sheet);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--raise);
+  overflow: hidden;
 }
 
 .editor textarea {
@@ -135,12 +342,12 @@ body,
   resize: none;
   border: none;
   outline: none;
-  background: var(--bg-panel);
+  background: transparent;
   color: var(--text);
-  font-family: 'Cascadia Code', 'Consolas', monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  padding: 14px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  padding: 16px;
 }
 
 .editor textarea::placeholder {
@@ -151,13 +358,17 @@ body,
   display: flex;
   flex-direction: column;
   min-width: 0;
+  background: var(--sheet);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--raise);
+  overflow: hidden;
 }
 
 .tabs {
   display: flex;
-  gap: 2px;
-  padding: 8px 12px 0;
-  background: var(--bg-panel);
+  gap: 4px;
+  padding: 10px 12px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -167,15 +378,23 @@ body,
   border: 1px solid transparent;
   border-bottom: none;
   border-radius: 8px 8px 0 0;
-  padding: 7px 18px;
-  font-size: 13px;
+  padding: 8px 16px;
+  font-size: 12.5px;
+  font-weight: 500;
   cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tab:hover:not(.tab--active) {
+  color: var(--text);
+  background: var(--mint-soft);
 }
 
 .tab--active {
-  background: var(--bg);
-  color: var(--text);
+  background: var(--bg-raised);
+  color: var(--accent);
   border-color: var(--border);
+  box-shadow: var(--edge);
 }
 
 .panel__body {

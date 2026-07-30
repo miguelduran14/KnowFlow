@@ -15,6 +15,41 @@ import type { FlowResult } from 'knowflow'
 import { useEffect, useState } from 'react'
 import { layoutFlow, nodeIdFor, type CanvasNode } from './layout.js'
 
+/**
+ * React Flow recibe colores como strings inline (no CSS), así que no
+ * heredan las variables del tema por cascada. Este hook resuelve los
+ * tokens que el lienzo necesita y se re-ejecuta cuando cambia el tema
+ * (toggle → atributo data-theme, o cambio de preferencia del SO), para
+ * que el fondo y las etiquetas dejen de desentonar en claro.
+ */
+function useThemeTokens() {
+  const read = () => {
+    const cs = getComputedStyle(document.documentElement)
+    const v = (name: string) => cs.getPropertyValue(name).trim()
+    return {
+      dots: v('--border'),
+      labelBg: v('--bg-raised'),
+      labelText: v('--text'),
+      dim: v('--text-dim'),
+      missing: v('--missing'),
+      guard: v('--violet'),
+    }
+  }
+  const [tokens, setTokens] = useState(read)
+  useEffect(() => {
+    const refresh = () => setTokens(read())
+    const obs = new MutationObserver(refresh)
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    const mq = window.matchMedia('(prefers-color-scheme: light)')
+    mq.addEventListener('change', refresh)
+    return () => {
+      obs.disconnect()
+      mq.removeEventListener('change', refresh)
+    }
+  }, [])
+  return tokens
+}
+
 type CobolNodeData = { canvas: CanvasNode; focused?: boolean }
 type CobolNode = Node<CobolNodeData, 'cobol'>
 
@@ -57,6 +92,7 @@ export function FlowCanvas({
   const [nodes, setNodes] = useState<CobolNode[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const focusId = focusParagraph ? nodeIdFor(focusParagraph) : undefined
+  const tk = useThemeTokens()
 
   useEffect(() => {
     let cancelled = false
@@ -78,14 +114,16 @@ export function FlowCanvas({
         graph.edges.map(e => {
           // Las aristas condicionales se pintan en el color de la rama y
           // más finas: de un vistazo se distingue el camino que siempre se
-          // recorre del que depende de un IF/EVALUATE.
+          // recorre del que depende de un IF/EVALUATE. Las etiquetas sí
+          // usan tokens del tema (fondo/texto), que es lo que desentonaba
+          // en claro; los hues semánticos de las líneas se mantienen.
           const isFall = e.kind === 'fall-through'
           const color = isFall
             ? EDGE_COLOR['fall-through']!
             : e.toMissing
-              ? '#f7768e'
+              ? tk.missing
               : e.guarded
-                ? '#bb9af7'
+                ? tk.guard
                 : EDGE_COLOR[e.kind] ?? '#7aa2f7'
           const dash = e.kind === 'call' ? (e.dynamic ? '3 3' : '7 4') : isFall ? '2 4' : undefined
           return {
@@ -99,8 +137,8 @@ export function FlowCanvas({
               strokeWidth: e.guarded || isFall ? 1.2 : 1.6,
               ...(dash ? { strokeDasharray: dash } : {}),
             },
-            labelStyle: { fill: isFall ? '#565f89' : e.guarded ? '#bb9af7' : '#c0caf5', fontSize: 11 },
-            labelBgStyle: { fill: '#1f2335', fillOpacity: 0.9 },
+            labelStyle: { fill: isFall ? tk.dim : e.guarded ? tk.guard : tk.labelText, fontSize: 11 },
+            labelBgStyle: { fill: tk.labelBg, fillOpacity: 0.92 },
             labelBgPadding: [6, 3] as [number, number],
             labelBgBorderRadius: 4,
             markerEnd: { type: MarkerType.ArrowClosed, color },
@@ -111,7 +149,7 @@ export function FlowCanvas({
     return () => {
       cancelled = true
     }
-  }, [flow, focusId])
+  }, [flow, focusId, tk])
 
   // El foco se "consume" tras un momento: así el destaque queda un instante
   // (el usuario ve dónde aterriza), y luego el estado se limpia — un segundo
@@ -134,7 +172,7 @@ export function FlowCanvas({
       edgesFocusable={false}
       proOptions={{ hideAttribution: false }}
     >
-      <Background gap={24} size={1.5} color="#2a2f45" />
+      <Background gap={24} size={1.5} color={tk.dots} />
       <Controls showInteractive={false} />
       <MiniMap pannable zoomable className="minimap" />
     </ReactFlow>

@@ -10,7 +10,7 @@ import {
   type Inventory,
   type ParseResult,
 } from 'knowflow'
-import { useCallback, useMemo, useState, type DragEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
 import { ChainCanvas } from './ChainCanvas.js'
 import { ExplainPanel } from './ExplainPanel.js'
 import { FlowCanvas } from './FlowCanvas.js'
@@ -141,6 +141,40 @@ function MissingCopybookChip({
   )
 }
 
+/**
+ * Toggle de tema (papel milimetrado ↔ consola). Estampa `data-theme` en
+ * el <html>, que gana sobre el `prefers-color-scheme` del SO. Sin elección
+ * previa, respeta el SO (no estampa nada) — el hogar de la app es el oscuro.
+ */
+function ThemeToggle() {
+  const [theme, setTheme] = useState<'light' | 'dark' | null>(
+    () => localStorage.getItem('knowflow.theme') as 'light' | 'dark' | null,
+  )
+  useEffect(() => {
+    const root = document.documentElement
+    if (theme) root.setAttribute('data-theme', theme)
+    else root.removeAttribute('data-theme')
+  }, [theme])
+
+  const effective =
+    theme ?? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+  const next = effective === 'dark' ? 'light' : 'dark'
+
+  return (
+    <button
+      className="theme-toggle"
+      onClick={() => {
+        setTheme(next)
+        localStorage.setItem('knowflow.theme', next)
+      }}
+      title={`Cambiar a tema ${next === 'dark' ? 'oscuro' : 'claro'}`}
+      aria-label="Cambiar tema"
+    >
+      {effective === 'dark' ? '☾' : '☀'}
+    </button>
+  )
+}
+
 /** Toggle del modo aprendiz — consume el contexto del glosario. */
 function LearnToggle() {
   const { learn, setLearn } = useGlossary()
@@ -254,6 +288,7 @@ function AppShell() {
         </div>
         <div className="actions">
           <LearnToggle />
+          <ThemeToggle />
           <button onClick={() => setSource(SAMPLE)}>Cargar ejemplo</button>
           <button onClick={copyMermaid} disabled={!hasGraph}>
             Copiar Mermaid
@@ -273,7 +308,35 @@ function AppShell() {
 
       {(flow || data) && (
         <div className="notices">
-          {flow?.programId && <span className="notice">PROGRAM-ID: {flow.programId}</span>}
+          {flow?.programId && (
+            <span className="ident">
+              <span className="ident__dot" />
+              <span className="ident__label">PROGRAM-ID</span>
+              {flow.programId}
+            </span>
+          )}
+          {(hasGraph || inventory) && (
+            <div className="specs">
+              {hasGraph && (
+                <div className="specs__cell">
+                  <b>{flow!.paragraphs.filter(p => !p.implicit).length}</b>
+                  <span>párrafos</span>
+                </div>
+              )}
+              {inventory && (
+                <div className="specs__cell">
+                  <b>{inventory.files.length}</b>
+                  <span>ficheros</span>
+                </div>
+              )}
+              {inventory && (
+                <div className="specs__cell">
+                  <b>{inventory.tables.length}</b>
+                  <span>tablas</span>
+                </div>
+              )}
+            </div>
+          )}
           {flow?.fragment && (
             <span className="notice notice--warn">
               ⚠ Fragmento sin PROCEDURE DIVISION — parcialmente verificado
