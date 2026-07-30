@@ -7,9 +7,11 @@ import {
   type Explanation,
   type ExplanationProvider,
   type ProgramFacts,
+  type WalkthroughStep,
 } from 'knowflow'
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { GlossaryText } from './glossary.js'
 
 type ProviderKind = 'claude' | 'corporate'
 
@@ -23,35 +25,94 @@ const STORE = {
   corpAuthName: 'knowflow.corp.authName',
 } as const
 
-/** Diagrama compacto del recorrido curado: un nodo por etapa con párrafo.
- *  Es la espina de la narración, no el grafo completo (ese vive en Flujo). */
+/**
+ * Placeholder animado mientras la IA responde. Muestra la estructura del
+ * dossier ya reservada (badge + resumen + 5 slots de recorrido + espina)
+ * para que la espera se sienta menos vacía y el layout no salte al llegar.
+ */
+function DossierSkeleton({ reduce }: { reduce: boolean }) {
+  const shimmer = reduce ? undefined : 'sk-shimmer'
+  return (
+    <div className="dossier dossier--skeleton" aria-hidden="true">
+      <div className="sk-line sk-line--badge" />
+      <div className={`sk-line sk-line--long ${shimmer ?? ''}`} />
+      <div className={`sk-line sk-line--med ${shimmer ?? ''}`} />
+      <div className="sk-line sk-line--eyebrow" />
+      <div className="dossier__cols">
+        <div className="sk-steps">
+          {[0, 1, 2, 3, 4].map(i => (
+            <div key={i} className={`sk-step ${shimmer ?? ''}`} style={{ animationDelay: `${i * 0.08}s` }}>
+              <div className="sk-step__n" />
+              <div className="sk-step__body">
+                <div className="sk-line sk-line--full" />
+                <div className="sk-line sk-line--half" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="sk-spine">
+          {[0, 1, 2, 3, 4].map(i => (
+            <div key={i} className={`sk-node ${shimmer ?? ''}`} style={{ animationDelay: `${i * 0.08}s` }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Espina del recorrido: un nodo por etapa con párrafo. NO es el grafo
+ * completo — ese vive en Flujo — solo las etapas curadas por la IA. Las
+ * ramas condicionales (etapas con `branches`) llevan una línea segmentada
+ * de entrada, no continua, para avisar "aquí hay una decisión".
+ */
 function RecorridoDiagram({
   steps,
   hovered,
   onHover,
+  onJump,
 }: {
-  steps: { text: string; paragraph?: string | undefined }[]
+  steps: WalkthroughStep[]
   hovered: string | undefined
   onHover: (p: string | undefined) => void
+  onJump: (p: string) => void
 }) {
-  const nodes = steps.filter((s): s is { text: string; paragraph: string } => !!s.paragraph)
+  const nodes = steps.filter(
+    (s): s is WalkthroughStep & { paragraph: string } => typeof s.paragraph === 'string',
+  )
   if (nodes.length === 0) return null
   const H = 46
   const height = nodes.length * H + 8
 
   return (
-    <svg className="rec-diagram" viewBox={`0 0 220 ${height}`} width="220" role="img" aria-label="Espina del recorrido">
-      {nodes.slice(0, -1).map((_, i) => (
-        <line key={i} className="rec-edge" x1="110" y1={i * H + 34} x2="110" y2={(i + 1) * H + 10} />
-      ))}
+    <svg
+      className="rec-diagram"
+      viewBox={`0 0 220 ${height}`}
+      width="220"
+      role="img"
+      aria-label="Espina del recorrido"
+    >
+      {nodes.slice(0, -1).map((_, i) => {
+        // Si la ETAPA SIGUIENTE es condicional, la conexión que llega a ella
+        // se dibuja segmentada: la próxima ejecución depende de una guarda.
+        const next = nodes[i + 1]!
+        const cls = next.branches ? 'rec-edge rec-edge--branch' : 'rec-edge'
+        return <line key={i} className={cls} x1="110" y1={i * H + 34} x2="110" y2={(i + 1) * H + 10} />
+      })}
       {nodes.map((n, i) => {
         const on = hovered === n.paragraph
+        const cls = ['rec-node', on ? 'rec-node--on' : '', n.branches ? 'rec-node--branch' : '']
+          .filter(Boolean)
+          .join(' ')
         return (
           <g
             key={n.paragraph + i}
-            className={on ? 'rec-node rec-node--on' : 'rec-node'}
+            className={cls}
             onMouseEnter={() => onHover(n.paragraph)}
             onMouseLeave={() => onHover(undefined)}
+            onClick={() => onJump(n.paragraph)}
+            role="button"
+            tabIndex={0}
           >
             <rect x="14" y={i * H + 10} width="192" height="26" rx="7" />
             <text x="110" y={i * H + 27} textAnchor="middle">
@@ -64,7 +125,18 @@ function RecorridoDiagram({
   )
 }
 
-export function ExplainPanel({ facts }: { facts: ProgramFacts }) {
+export function ExplainPanel({
+  facts,
+  onJumpToParagraph,
+  explanation,
+  onExplanation,
+}: {
+  facts: ProgramFacts
+  onJumpToParagraph?: ((paragraph: string) => void) | undefined
+  /** Estado de la explicación levantado a App para sobrevivir cambios de pestaña. */
+  explanation: Explanation | undefined
+  onExplanation: (e: Explanation | undefined) => void
+}) {
   const reduce = useReducedMotion()
   const [kind, setKind] = useState<ProviderKind>(
     () => (localStorage.getItem(STORE.kind) as ProviderKind) || 'claude',
@@ -80,7 +152,6 @@ export function ExplainPanel({ facts }: { facts: ProgramFacts }) {
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | undefined>()
-  const [explanation, setExplanation] = useState<Explanation | undefined>()
   const [hovered, setHovered] = useState<string | undefined>()
 
   const fidelity = useMemo(() => factsFidelity(facts.data, facts.flow, facts.inventory), [facts])
@@ -88,10 +159,10 @@ export function ExplainPanel({ facts }: { facts: ProgramFacts }) {
   // Una explicación pertenece a los hechos con los que se generó: si el
   // fuente cambia, la anterior sería una afirmación falsa del programa nuevo.
   useEffect(() => {
-    setExplanation(undefined)
+    onExplanation(undefined)
     setError(undefined)
     setHovered(undefined)
-  }, [facts])
+  }, [facts, onExplanation])
 
   const persist = useCallback((storeKey: string, value: string, set: (v: string) => void) => {
     set(value)
@@ -127,10 +198,10 @@ export function ExplainPanel({ facts }: { facts: ProgramFacts }) {
             auth: corpAuth,
           })
     explainProgram(facts, provider)
-      .then(setExplanation)
+      .then(onExplanation)
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setBusy(false))
-  }, [kind, apiKey, model, corpEndpoint, corpKey, corpModel, corpAuth, facts])
+  }, [kind, apiKey, model, corpEndpoint, corpKey, corpModel, corpAuth, facts, onExplanation])
 
   const container: Variants = {
     hidden: {},
@@ -241,6 +312,8 @@ export function ExplainPanel({ facts }: { facts: ProgramFacts }) {
 
       {error && <div className="explain__error">{error}</div>}
 
+      {busy && !explanation && <DossierSkeleton reduce={!!reduce} />}
+
       <AnimatePresence mode="wait">
         {explanation && (
           <motion.article
@@ -260,7 +333,7 @@ export function ExplainPanel({ facts }: { facts: ProgramFacts }) {
               <motion.div variants={container} initial="hidden" animate="show">
                 {explanation.summary && (
                   <motion.p variants={item} className="dossier__summary">
-                    {explanation.summary}
+                    <GlossaryText text={explanation.summary} />
                   </motion.p>
                 )}
 
@@ -275,7 +348,13 @@ export function ExplainPanel({ facts }: { facts: ProgramFacts }) {
                         key={i}
                         variants={item}
                         className={
-                          step.paragraph && hovered === step.paragraph ? 'wt__step wt__step--on' : 'wt__step'
+                          [
+                            'wt__step',
+                            step.paragraph && hovered === step.paragraph ? 'wt__step--on' : '',
+                            step.branches ? 'wt__step--branch' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')
                         }
                         onMouseEnter={() => setHovered(step.paragraph)}
                         onMouseLeave={() => setHovered(undefined)}
@@ -283,8 +362,30 @@ export function ExplainPanel({ facts }: { facts: ProgramFacts }) {
                       >
                         <span className="wt__n">{i + 1}</span>
                         <span className="wt__body">
-                          {step.text}
-                          {step.paragraph && <span className="wt__para">{step.paragraph}</span>}
+                          <GlossaryText text={step.text} />
+                          {step.paragraph && (
+                            <span className="wt__meta">
+                              {/* Chip clickable: salta al párrafo real en la pestaña Flujo.
+                                  Es la última milla de verificabilidad — el lector puede ir a
+                                  la línea del fuente y comprobar la afirmación. */}
+                              <button
+                                type="button"
+                                className="wt__para-chip"
+                                onClick={() => onJumpToParagraph?.(step.paragraph!)}
+                                title="Ver este párrafo en el diagrama de Flujo"
+                              >
+                                {step.paragraph}
+                                {step.line !== undefined && (
+                                  <span className="wt__para-line">L{step.line}</span>
+                                )}
+                              </button>
+                              {step.branches && (
+                                <span className="wt__branch-tag" title="Aquí hay una decisión (IF/EVALUATE)">
+                                  rama
+                                </span>
+                              )}
+                            </span>
+                          )}
                         </span>
                       </motion.li>
                     ))}
@@ -295,6 +396,7 @@ export function ExplainPanel({ facts }: { facts: ProgramFacts }) {
                       steps={explanation.walkthrough}
                       hovered={hovered}
                       onHover={setHovered}
+                      onJump={p => onJumpToParagraph?.(p)}
                     />
                   </div>
                 </div>

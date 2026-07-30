@@ -253,6 +253,7 @@ export function parseFlow(source: string): FlowResult {
         kind: header.kind,
         ...(header.kind === 'paragraph' && currentSection ? { section: currentSection } : {}),
         ...(inDeclaratives ? { inDeclaratives: true } : {}),
+        line,
       }
       paragraphs.push(para)
       headerLine.set(para, line)

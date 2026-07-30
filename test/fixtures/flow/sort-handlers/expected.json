@@ -4,36 +4,43 @@
     {
       "name": "MAIN-PARA",
       "kind": "paragraph",
+      "line": 8,
       "terminates": true
     },
     {
       "name": "LOAD-PARA",
       "kind": "paragraph",
+      "line": 13,
       "terminates": true
     },
     {
       "name": "MARK-DONE-PARA",
       "kind": "paragraph",
+      "line": 21,
       "fallsThrough": true
     },
     {
       "name": "EMIT-PARA",
       "kind": "paragraph",
+      "line": 23,
       "fallsThrough": true
     },
     {
       "name": "BAD-KEY-PARA",
       "kind": "paragraph",
+      "line": 33,
       "fallsThrough": true
     },
     {
       "name": "OVERFLOW-PARA",
       "kind": "paragraph",
+      "line": 35,
       "fallsThrough": true
     },
     {
       "name": "EMIT-EXIT",
       "kind": "paragraph",
+      "line": 37,
       "terminates": true
     }
   ],

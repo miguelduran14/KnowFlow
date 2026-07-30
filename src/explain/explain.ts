@@ -50,6 +50,18 @@ export interface WalkthroughStep {
    * diagrama). Ausente si el modelo no lo dio o nombró uno inexistente.
    */
   paragraph?: string | undefined
+  /**
+   * Línea 1-based de la cabecera del párrafo en el fuente. La añade el
+   * motor a partir de los hechos, no el modelo — así se puede saltar al
+   * código exacto sin fiarnos de un número que la IA haya adivinado.
+   */
+  line?: number | undefined
+  /**
+   * `true` si al menos una arista de flujo que sale de este párrafo tiene
+   * `guards` (nace dentro de un IF/EVALUATE). Es una señal, no un mapa
+   * completo de ramas — sirve para marcar la etapa como condicional.
+   */
+  branches?: boolean | undefined
 }
 
 /** Explicación estructurada: narración de la IA sobre los hechos del parser */
@@ -84,13 +96,22 @@ function extractJson(text: string): unknown {
   }
 }
 
+/** Índices derivados de los hechos que enriquecen cada etapa validada. */
+interface ParagraphIndex {
+  /** Nombre en mayúsculas → grafía canónica del fuente */
+  canonical: Map<string, string>
+  /** Nombre canónico → línea 1-based del párrafo en el fuente */
+  lineOf: Map<string, number>
+  /** Nombre canónico → true si alguna arista suya tiene guardas (rama) */
+  branchesFrom: Set<string>
+}
+
 /**
  * Convierte la respuesta cruda en una `Explanation`, validando cada
- * referencia a párrafo contra los nombres reales. `known` mapea el nombre
- * en mayúsculas a su forma canónica (la del fuente), para devolver la
- * referencia con la grafía correcta.
+ * referencia a párrafo contra los nombres reales y enriqueciendo la etapa
+ * con la línea del fuente y la señal de ramificación.
  */
-function toExplanation(raw: string, known: Map<string, string>): Explanation {
+function toExplanation(raw: string, index: ParagraphIndex): Explanation {
   const obj = extractJson(raw)
   if (obj && typeof obj === 'object') {
     const o = obj as { summary?: unknown; walkthrough?: unknown }
@@ -107,8 +128,15 @@ function toExplanation(raw: string, known: Map<string, string>): Explanation {
       if (text === '') continue
       const rawPara = (item as { paragraph?: unknown })?.paragraph
       const canonical =
-        typeof rawPara === 'string' ? known.get(rawPara.trim().toUpperCase()) : undefined
-      walkthrough.push({ text, ...(canonical ? { paragraph: canonical } : {}) })
+        typeof rawPara === 'string' ? index.canonical.get(rawPara.trim().toUpperCase()) : undefined
+      const line = canonical ? index.lineOf.get(canonical) : undefined
+      const branches = canonical ? index.branchesFrom.has(canonical) : false
+      walkthrough.push({
+        text,
+        ...(canonical ? { paragraph: canonical } : {}),
+        ...(line !== undefined ? { line } : {}),
+        ...(branches ? { branches: true } : {}),
+      })
     }
     if (summary !== '' || walkthrough.length > 0) {
       return { summary, walkthrough, raw, structured: true }
@@ -132,14 +160,20 @@ export async function explainProgram(
     throw new Error('No hay hechos que explicar: parsea un programa primero')
   }
 
-  const known = new Map<string, string>()
+  const canonical = new Map<string, string>()
+  const lineOf = new Map<string, number>()
   for (const para of facts.flow?.paragraphs ?? []) {
-    known.set(para.name.toUpperCase(), para.name)
+    canonical.set(para.name.toUpperCase(), para.name)
+    if (para.line !== undefined) lineOf.set(para.name, para.line)
+  }
+  const branchesFrom = new Set<string>()
+  for (const edge of facts.flow?.edges ?? []) {
+    if (edge.guards && edge.guards.length > 0) branchesFrom.add(edge.from)
   }
 
   const raw = await provider.complete(
     SYSTEM_PROMPT,
     `Narra este programa a partir de sus hechos verificados:\n\n${rendered}`,
   )
-  return toExplanation(raw, known)
+  return toExplanation(raw, { canonical, lineOf, branchesFrom })
 }

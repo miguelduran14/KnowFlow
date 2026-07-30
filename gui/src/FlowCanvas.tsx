@@ -13,14 +13,16 @@ import {
 import '@xyflow/react/dist/style.css'
 import type { FlowResult } from 'knowflow'
 import { useEffect, useState } from 'react'
-import { layoutFlow, type CanvasNode } from './layout.js'
+import { layoutFlow, nodeIdFor, type CanvasNode } from './layout.js'
 
-type CobolNode = Node<{ canvas: CanvasNode }, 'cobol'>
+type CobolNodeData = { canvas: CanvasNode; focused?: boolean }
+type CobolNode = Node<CobolNodeData, 'cobol'>
 
 function CobolNodeView({ data }: NodeProps<CobolNode>) {
-  const { canvas } = data
+  const { canvas, focused } = data
+  const cls = `node node--${canvas.variant}${focused ? ' node--focus' : ''}`
   return (
-    <div className={`node node--${canvas.variant}`} style={{ width: canvas.width, minHeight: canvas.height }}>
+    <div className={cls} style={{ width: canvas.width, minHeight: canvas.height }}>
       <Handle type="target" position={Position.Top} className="handle" />
       <span className="node__label">{canvas.label}</span>
       {canvas.terminates && <span className="node__badge">fin de programa</span>}
@@ -43,9 +45,18 @@ const EDGE_COLOR: Record<string, string> = {
   'fall-through': '#565f89',
 }
 
-export function FlowCanvas({ flow }: { flow: FlowResult }) {
+export function FlowCanvas({
+  flow,
+  focusParagraph,
+  onFocused,
+}: {
+  flow: FlowResult
+  focusParagraph?: string | undefined
+  onFocused?: (() => void) | undefined
+}) {
   const [nodes, setNodes] = useState<CobolNode[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
+  const focusId = focusParagraph ? nodeIdFor(focusParagraph) : undefined
 
   useEffect(() => {
     let cancelled = false
@@ -60,7 +71,7 @@ export function FlowCanvas({ flow }: { flow: FlowResult }) {
           // tiene que medir el DOM para decidir dónde anclar las aristas.
           width: n.width,
           height: n.height,
-          data: { canvas: n },
+          data: { canvas: n, focused: focusId === n.id },
         })),
       )
       setEdges(
@@ -100,7 +111,16 @@ export function FlowCanvas({ flow }: { flow: FlowResult }) {
     return () => {
       cancelled = true
     }
-  }, [flow])
+  }, [flow, focusId])
+
+  // El foco se "consume" tras un momento: así el destaque queda un instante
+  // (el usuario ve dónde aterriza), y luego el estado se limpia — un segundo
+  // clic en la misma etapa vuelve a disparar el foco.
+  useEffect(() => {
+    if (!focusParagraph || !onFocused) return
+    const t = window.setTimeout(() => onFocused(), 1600)
+    return () => window.clearTimeout(t)
+  }, [focusParagraph, onFocused])
 
   return (
     <ReactFlow

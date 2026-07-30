@@ -4,16 +4,19 @@
     {
       "name": "0000-MAIN",
       "kind": "paragraph",
+      "line": 6,
       "terminates": true
     },
     {
       "name": "1000-INIT",
       "kind": "paragraph",
+      "line": 10,
       "fallsThrough": true
     },
     {
       "name": "2000-PROCESS",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "line": 12
     }
   ],
   "edges": [

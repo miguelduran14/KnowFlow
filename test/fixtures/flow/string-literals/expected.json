@@ -4,11 +4,13 @@
     {
       "name": "MAIN-PARA",
       "kind": "paragraph",
+      "line": 6,
       "fallsThrough": true
     },
     {
       "name": "REAL-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "line": 12
     }
   ],
   "edges": [

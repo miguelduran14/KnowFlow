@@ -3,20 +3,24 @@
   "paragraphs": [
     {
       "name": "MAIN-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "line": 10
     },
     {
       "name": "CHOICE-A",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "line": 15
     },
     {
       "name": "CHOICE-B",
       "kind": "paragraph",
+      "line": 18,
       "fallsThrough": true
     },
     {
       "name": "FINISH-PARA",
       "kind": "paragraph",
+      "line": 20,
       "terminates": true
     }
   ],

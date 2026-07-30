@@ -3,11 +3,13 @@
     {
       "name": "MAIN-LOGIC",
       "kind": "paragraph",
+      "line": 2,
       "terminates": true
     },
     {
       "name": "CHECK-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "line": 5
     }
   ],
   "edges": [

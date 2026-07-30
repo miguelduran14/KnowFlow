@@ -35,10 +35,13 @@ export interface CanvasGraph {
   edges: CanvasEdge[]
 }
 
-/** Mismo criterio que el motor usa para Mermaid: COBOL es case-insensitive */
+/** Mismo criterio que el motor usa para Mermaid: COBOL es case-insensitive.
+ *  Expuesto (`nodeIdFor`) para que otros componentes puedan pedir el id de
+ *  un nodo por su nombre COBOL — p. ej. para resaltarlo desde fuera. */
 function nodeId(name: string): string {
   return name.toUpperCase().replace(/[^A-Z0-9]/g, '_')
 }
+export const nodeIdFor = nodeId
 
 const elk = new ELK()
 

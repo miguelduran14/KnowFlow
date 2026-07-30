@@ -9,11 +9,13 @@
     {
       "name": "VALIDATE-PARA",
       "kind": "paragraph",
+      "line": 7,
       "fallsThrough": true
     },
     {
       "name": "APPLY-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "line": 9
     }
   ],
   "edges": [

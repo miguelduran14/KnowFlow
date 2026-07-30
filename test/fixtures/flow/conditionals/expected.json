@@ -4,46 +4,55 @@
     {
       "name": "MAIN-PARA",
       "kind": "paragraph",
+      "line": 7,
       "fallsThrough": true
     },
     {
       "name": "INIT-PARA",
       "kind": "paragraph",
+      "line": 24,
       "fallsThrough": true
     },
     {
       "name": "PATH-A",
       "kind": "paragraph",
+      "line": 32,
       "fallsThrough": true
     },
     {
       "name": "PATH-B",
       "kind": "paragraph",
+      "line": 34,
       "fallsThrough": true
     },
     {
       "name": "DO-A",
       "kind": "paragraph",
+      "line": 36,
       "fallsThrough": true
     },
     {
       "name": "DO-BC",
       "kind": "paragraph",
+      "line": 38,
       "fallsThrough": true
     },
     {
       "name": "DO-REST",
       "kind": "paragraph",
+      "line": 40,
       "fallsThrough": true
     },
     {
       "name": "MID-PARA",
       "kind": "paragraph",
+      "line": 42,
       "fallsThrough": true
     },
     {
       "name": "CLOSE-PARA",
       "kind": "paragraph",
+      "line": 44,
       "terminates": true
     }
   ],

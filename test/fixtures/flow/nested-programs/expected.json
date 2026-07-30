@@ -4,11 +4,13 @@
     {
       "name": "MAIN-PARA",
       "kind": "paragraph",
+      "line": 7,
       "terminates": true
     },
     {
       "name": "PREP-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "line": 11
     }
   ],
   "edges": [

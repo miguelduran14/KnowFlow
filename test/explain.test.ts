@@ -117,11 +117,26 @@ describe('explainProgram', () => {
 
     expect(result.structured).toBe(true)
     expect(result.summary).toBe('Un programa de ejemplo.')
+    // El motor enriquece cada referencia validada con la línea del fuente
+    // (a partir de FlowParagraph.line): así la GUI puede saltar al código.
     expect(result.walkthrough).toEqual([
-      { text: 'Arranca en el párrafo principal.', paragraph: 'MAIN-PARA' },
-      { text: 'Inicializa los contadores.', paragraph: 'INIT-PARA' },
+      { text: 'Arranca en el párrafo principal.', paragraph: 'MAIN-PARA', line: 8 },
+      { text: 'Inicializa los contadores.', paragraph: 'INIT-PARA', line: 13 },
       { text: 'Una etapa sin párrafo concreto.' },
     ])
+  })
+
+  it('enriquece la etapa con branches=true si el párrafo tiene guardas', async () => {
+    const flow = parseFlow(readFixture('flow', 'conditionals', 'main.cbl'))
+    // MAIN-PARA de conditionals tiene aristas dentro de un IF/EVALUATE.
+    const provider = createFakeProvider(
+      JSON.stringify({
+        summary: 'x',
+        walkthrough: [{ text: 'Elige la rama según el estado.', paragraph: 'MAIN-PARA' }],
+      }),
+    )
+    const result = await explainProgram({ flow }, provider)
+    expect(result.walkthrough[0]?.branches).toBe(true)
   })
 
   it('drops a paragraph reference the model invented (ADR-0003)', async () => {

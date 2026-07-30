@@ -4,29 +4,34 @@
     {
       "name": "CONTROL-SECTION",
       "kind": "section",
+      "line": 6,
       "fallsThrough": true
     },
     {
       "name": "MAIN-PARA",
       "kind": "paragraph",
       "section": "CONTROL-SECTION",
+      "line": 7,
       "terminates": true
     },
     {
       "name": "IO-SECTION",
       "kind": "section",
+      "line": 10,
       "fallsThrough": true
     },
     {
       "name": "READ-PARA",
       "kind": "paragraph",
       "section": "IO-SECTION",
+      "line": 11,
       "fallsThrough": true
     },
     {
       "name": "WRITE-PARA",
       "kind": "paragraph",
-      "section": "IO-SECTION"
+      "section": "IO-SECTION",
+      "line": 13
     }
   ],
   "edges": [

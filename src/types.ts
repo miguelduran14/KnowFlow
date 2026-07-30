@@ -141,6 +141,12 @@ export interface FlowParagraph {
   kind: 'paragraph' | 'section'
   /** Sección a la que pertenece el párrafo, si el programa usa secciones */
   section?: string | undefined
+  /**
+   * Línea 1-based de la cabecera en el fuente. Permite anclar cada párrafo
+   * a un punto concreto del código para verificarlo. Ausente en el nodo
+   * de entrada implícito, que no existe en el fuente.
+   */
+  line?: number | undefined
   /** Contiene STOP RUN, GOBACK o EXIT PROGRAM */
   terminates?: boolean | undefined
   /**

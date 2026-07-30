@@ -4,21 +4,25 @@
     {
       "name": "DRIVER-PARA",
       "kind": "paragraph",
+      "line": 13,
       "terminates": true
     },
     {
       "name": "STEP-ONE",
       "kind": "paragraph",
+      "line": 16,
       "fallsThrough": true
     },
     {
       "name": "STEP-TWO",
       "kind": "paragraph",
+      "line": 18,
       "fallsThrough": true
     },
     {
       "name": "DEAD-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "line": 20
     }
   ],
   "edges": [

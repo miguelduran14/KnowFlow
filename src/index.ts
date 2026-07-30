@@ -1,6 +1,7 @@
 export { parse } from './parser.js'
 export { parseFlow } from './flow-parser.js'
 export { parseInventory } from './inventory.js'
+export { GLOSSARY, GLOSSARY_BY_ID, segmentText, type GlossaryEntry, type Segment } from './glossary.js'
 export { flowEdgeLabel, flowToMermaid, linkedFlowToMermaid } from './mermaid.js'
 export { linkPrograms } from './linker.js'
 export {

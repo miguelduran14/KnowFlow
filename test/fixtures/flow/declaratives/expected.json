@@ -5,29 +5,34 @@
       "name": "ERR-SECTION",
       "kind": "section",
       "inDeclaratives": true,
+      "line": 9,
       "fallsThrough": true
     },
     {
       "name": "ERR-PARA",
       "kind": "paragraph",
       "section": "ERR-SECTION",
-      "inDeclaratives": true
+      "inDeclaratives": true,
+      "line": 11
     },
     {
       "name": "MAIN-SECTION",
       "kind": "section",
+      "line": 14,
       "fallsThrough": true
     },
     {
       "name": "MAIN-PARA",
       "kind": "paragraph",
       "section": "MAIN-SECTION",
+      "line": 15,
       "terminates": true
     },
     {
       "name": "LOG-PARA",
       "kind": "paragraph",
-      "section": "MAIN-SECTION"
+      "section": "MAIN-SECTION",
+      "line": 18
     }
   ],
   "edges": [

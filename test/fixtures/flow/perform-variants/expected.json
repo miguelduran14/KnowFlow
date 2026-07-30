@@ -4,26 +4,31 @@
     {
       "name": "MAIN-PARA",
       "kind": "paragraph",
+      "line": 5,
       "terminates": true
     },
     {
       "name": "SETUP-PARA",
       "kind": "paragraph",
+      "line": 13,
       "fallsThrough": true
     },
     {
       "name": "SETUP-EXIT",
       "kind": "paragraph",
+      "line": 15,
       "fallsThrough": true
     },
     {
       "name": "COUNT-PARA",
       "kind": "paragraph",
+      "line": 17,
       "fallsThrough": true
     },
     {
       "name": "READ-PARA",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "line": 19
     }
   ],
   "edges": [

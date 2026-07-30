@@ -4,31 +4,37 @@
     {
       "name": "0000-MAIN",
       "kind": "paragraph",
+      "line": 8,
       "terminates": true
     },
     {
       "name": "1000-INIT",
       "kind": "paragraph",
+      "line": 13,
       "fallsThrough": true
     },
     {
       "name": "2000-PROCESS",
       "kind": "paragraph",
+      "line": 15,
       "fallsThrough": true
     },
     {
       "name": "2100-READ",
       "kind": "paragraph",
+      "line": 22,
       "fallsThrough": true
     },
     {
       "name": "2100-READ-EXIT",
       "kind": "paragraph",
+      "line": 24,
       "fallsThrough": true
     },
     {
       "name": "9000-CLEANUP",
-      "kind": "paragraph"
+      "kind": "paragraph",
+      "line": 26
     }
   ],
   "edges": [
