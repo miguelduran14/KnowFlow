@@ -27,7 +27,8 @@
   --well: inset 0 2px 10px rgba(0, 0, 0, 0.45);
   --edge: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
-  --mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Menlo, Consolas, monospace;
+  --mono: "Fira Code", ui-monospace, "Cascadia Code", "SFMono-Regular", Menlo, Consolas, monospace;
+  --sans: "Fira Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 /* Claro = papel milimetrado. Se aplica si el SO lo pide y el usuario no ha
@@ -104,7 +105,9 @@ body,
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .app {
@@ -173,49 +176,21 @@ body,
   gap: 8px;
 }
 
-.actions button {
-  background: var(--bg-raised);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 13px;
-  cursor: pointer;
-  box-shadow: var(--edge);
-  transition: border-color 0.15s, transform 0.15s;
-}
-
-.actions button:hover:not(:disabled) {
-  border-color: var(--accent);
-  transform: translateY(-1px);
-}
-
-.actions button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-/* Toggle de tema (sol/luna), redondo, en la barra de acciones. */
-.theme-toggle {
-  display: inline-grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  font-size: 15px;
-  line-height: 1;
-  border-radius: 999px;
-}
-
 /* ── Banda de identidad del programa (la "ficha" de D) ──────────────── */
-.notices {
+.identband {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  padding: 11px 20px;
-  background: color-mix(in srgb, var(--bg-panel) 55%, transparent);
+  padding: 12px 18px;
   border-bottom: 1px solid var(--border);
+}
+
+.identband__chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 /* PROGRAM-ID con punto pulsante — lo primero que identifica el fuente. */
@@ -318,26 +293,162 @@ body,
   border-color: var(--missing);
 }
 
-.content {
-  display: grid;
-  grid-template-columns: minmax(280px, 1fr) 2fr;
+/* ── Workspace: rail · escenario · panel de código ────────────────────── */
+.workspace {
   flex: 1;
   min-height: 0;
-  gap: 14px;
-  padding: 14px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
-/* Editor y panel como "hojas" elevadas sobre el fondo (grid/glow). */
-.editor {
+/* Rail de navegación vertical. */
+.rail {
   display: flex;
-  background: var(--sheet);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--raise);
-  overflow: hidden;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 10px;
+  width: 168px;
+  border-right: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-panel) 45%, transparent);
 }
 
-.editor textarea {
+.rail-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.rail-item__icon,
+.rail-item__label {
+  position: relative;
+  z-index: 1;
+}
+
+.rail-item:hover:not(:disabled):not(.rail-item--active) {
+  color: var(--text);
+}
+
+.rail-item--active {
+  color: var(--accent);
+}
+
+.rail-item:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.rail-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Indicador de elemento compartido (framer layoutId): se desliza. */
+.rail-item__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 9px;
+  background: var(--mint-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: var(--edge);
+}
+
+/* Escenario: banda de identidad + vista activa. */
+.stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.stage__body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.stage__view {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+}
+
+/* ── Panel de código plegable ─────────────────────────────────────────── */
+.code-panel {
+  display: flex;
+  border-left: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-panel) 45%, transparent);
+  width: 44px;
+  transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.code-panel--open {
+  width: min(420px, 38vw);
+}
+
+.code-panel__handle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 44px;
+  flex-shrink: 0;
+  padding: 14px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.code-panel__handle:hover {
+  color: var(--accent);
+}
+
+.code-panel--open .code-panel__handle {
+  flex-direction: row;
+  width: 100%;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.code-panel__handle-label {
+  writing-mode: vertical-rl;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.code-panel__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.code-panel__title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 10px 14px 4px;
+}
+
+.code-panel__body textarea {
   flex: 1;
   resize: none;
   border: none;
@@ -345,63 +456,93 @@ body,
   background: transparent;
   color: var(--text);
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.55;
-  padding: 16px;
+  padding: 6px 14px 14px;
 }
 
-.editor textarea::placeholder {
-  color: var(--text-dim);
-}
-
-.panel {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  background: var(--sheet);
+/* ── Botones ──────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-raised);
+  color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--raise);
-  overflow: hidden;
-}
-
-.tabs {
-  display: flex;
-  gap: 4px;
-  padding: 10px 12px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.tab {
-  background: transparent;
-  color: var(--text-dim);
-  border: 1px solid transparent;
-  border-bottom: none;
-  border-radius: 8px 8px 0 0;
-  padding: 8px 16px;
-  font-size: 12.5px;
+  border-radius: 9px;
+  padding: 7px 15px;
+  font-family: var(--sans);
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-}
-
-.tab:hover:not(.tab--active) {
-  color: var(--text);
-  background: var(--mint-soft);
-}
-
-.tab--active {
-  background: var(--bg-raised);
-  color: var(--accent);
-  border-color: var(--border);
   box-shadow: var(--edge);
+  transition: border-color 0.15s, transform 0.12s, background 0.15s;
 }
 
-.panel__body {
-  flex: 1;
-  min-height: 0;
-  position: relative;
-  overflow: auto;
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: #06231c;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+:root[data-theme="light"] .btn--primary {
+  color: #ffffff;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .btn--primary {
+    color: #ffffff;
+  }
+}
+
+.btn--primary:hover:not(:disabled) {
+  border-color: transparent;
+  filter: brightness(1.06);
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-raised);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: var(--edge);
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.icon-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .notice--copybook {
@@ -463,7 +604,7 @@ body,
   background: var(--bg-raised);
   border: 1.5px solid var(--accent);
   color: var(--text);
-  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-family: var(--mono);
 }
 
 .prog__name {
@@ -475,7 +616,7 @@ body,
 .prog__note {
   font-size: 10px;
   color: var(--text-dim);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--sans);
 }
 
 .prog--supplied {
@@ -548,7 +689,7 @@ body,
   width: 100%;
   border-collapse: collapse;
   font-size: 12.5px;
-  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-family: var(--mono);
 }
 
 .schema th {
@@ -557,7 +698,7 @@ body,
   font-weight: 600;
   padding: 6px 10px;
   border-bottom: 1px solid var(--border);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--sans);
 }
 
 .schema td {
@@ -591,7 +732,7 @@ body,
   border-radius: 999px;
   border: 1px solid var(--border);
   color: var(--text-dim);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--sans);
 }
 
 .pill--redefines {
@@ -888,7 +1029,7 @@ body,
 .dossier__raw {
   margin: 0;
   white-space: pre-wrap;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--sans);
   font-size: 13.5px;
   line-height: 1.6;
   color: var(--text);
@@ -933,7 +1074,7 @@ body,
   border: 1.5px solid var(--accent);
   color: var(--text);
   font-size: 13px;
-  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-family: var(--mono);
 }
 
 .node__label {
@@ -946,7 +1087,7 @@ body,
   background: var(--accent);
   padding: 1px 8px;
   border-radius: 999px;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--sans);
 }
 
 .node__section {
@@ -959,7 +1100,7 @@ body,
   padding: 0 6px;
   border-radius: 4px;
   border: 1px solid var(--border);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--sans);
 }
 
 .node--section {
@@ -1045,7 +1186,7 @@ body,
 }
 
 .inv-file__name {
-  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-family: var(--mono);
   font-size: 13px;
   color: var(--text);
 }
@@ -1066,7 +1207,7 @@ body,
 .inv-verb {
   display: inline-block;
   min-width: 96px;
-  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-family: var(--mono);
   font-size: 11.5px;
   color: var(--accent);
 }
@@ -1092,7 +1233,7 @@ body,
   padding: 2px 9px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-family: var(--mono);
   font-size: 11px;
   color: var(--text-dim);
   white-space: nowrap;
@@ -1125,7 +1266,7 @@ body,
 }
 
 .inv-cursor__name {
-  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-family: var(--mono);
   color: var(--text);
   min-width: 140px;
 }
@@ -1178,7 +1319,7 @@ body,
 }
 
 .inv-execs__text {
-  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-family: var(--mono);
   font-size: 11.5px;
   color: var(--text-dim);
   word-break: break-word;
@@ -1523,4 +1664,170 @@ body,
 }
 .missing-cpy--over .missing-cpy__hint {
   color: var(--missing);
+}
+
+/* ── Estado de bienvenida (landing) ───────────────────────────────────── */
+.landing {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 26px;
+  padding: 6vh 24px 40px;
+}
+
+.dropzone {
+  width: min(680px, 92vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 40px 32px;
+  background: var(--sheet);
+  border: 1.5px dashed var(--border);
+  border-radius: 18px;
+  box-shadow: var(--raise);
+  transition: border-color 0.18s, background 0.18s, transform 0.18s;
+}
+
+.dropzone--over {
+  border-color: var(--accent);
+  background: var(--mint-soft);
+  transform: scale(1.01);
+}
+
+.dropzone__icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: var(--mint-soft);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.landing__title {
+  margin: 4px 0 0;
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  max-width: 18ch;
+  text-wrap: balance;
+}
+
+.landing__title .accent {
+  color: var(--accent);
+}
+
+.landing__sub {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-width: 56ch;
+}
+
+.landing__sub code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  color: var(--text);
+  background: var(--bg-raised);
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+}
+
+.landing__cta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.landing__or {
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.preview-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  width: min(680px, 92vw);
+}
+
+@media (max-width: 640px) {
+  .preview-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.preview-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 14px;
+  background: var(--sheet);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--raise);
+  color: var(--accent);
+}
+
+.preview-card > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.preview-card b {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.preview-card span {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.landing__ip {
+  margin: 0;
+  max-width: 60ch;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+/* ── Overlay de arrastre (con programa ya cargado) ────────────────────── */
+.drag-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+  backdrop-filter: blur(3px);
+  pointer-events: none;
+}
+
+.drag-overlay__card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 28px;
+  background: var(--sheet);
+  border: 1.5px dashed var(--accent);
+  border-radius: 16px;
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: var(--raise);
 }
