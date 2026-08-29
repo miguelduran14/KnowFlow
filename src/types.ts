@@ -343,6 +343,41 @@ export interface Inventory {
   cicsCommands: { command: string; count: number }[]
 }
 
+// ── Avisos: trampas conocidas de mantenimiento COBOL ────────────────────
+
+/**
+ * Regla de aviso reconocida. Cada una es un patrón de mantenimiento COBOL
+ * bien conocido, detectado sobre hechos YA verificados por el parser (no
+ * es una interpretación nueva del fuente) — la misma disciplina de
+ * no-invención que el resto del motor (ADR-0003).
+ *
+ * Distinción con `missingCopybooks`/`missingTargets`/`dynamic`: aquellos
+ * marcan lo que el parser NO pudo verificar; un aviso es lo contrario —
+ * algo que SÍ está verificado, pero que es una trampa de mantenimiento
+ * conocida (p. ej. un STOP RUN que corta el job entero desde un módulo
+ * llamado). Verificado y arriesgado no son lo mismo.
+ */
+export type AdvisoryRule =
+  | 'stop-run-in-subprogram'
+  | 'sql-write-without-where'
+  | 'goto-crosses-section'
+  | 'file-opened-not-closed'
+  | 'cursor-opened-not-closed'
+  | 'cursor-fetched-without-open'
+  | 'alter-statement'
+
+/** Un aviso concreto, anclado a la línea del fuente que lo dispara */
+export interface Advisory {
+  rule: AdvisoryRule
+  /** Frase corta para chip/lista */
+  title: string
+  /** Explicación en lenguaje llano de por qué es una trampa */
+  message: string
+  line: number
+  /** Párrafo donde ocurre, si aplica — permite saltar al diagrama de Flujo */
+  paragraph?: string | undefined
+}
+
 /** Hechos de flujo extraídos de la PROCEDURE DIVISION */
 export interface FlowResult {
   /** PROGRAM-ID si aparece en el fuente */

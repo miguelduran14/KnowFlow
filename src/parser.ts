@@ -53,13 +53,19 @@ const LEVEL_RE = /^(\d{1,2})\s+([\w-]+)/
 // El punto es ambiguo en COBOL: dentro de un PIC editado (PIC ZZ,ZZ9.99)
 // es el punto decimal de edición; fuera es el terminador de sentencia. Lo
 // resolvemos con un lookahead: si al punto le sigue un dígito o carácter
-// de edición (Z, 9, *, etc.), es parte de la PIC.
-const PIC_RE = /PIC(?:TURE)?\s+IS\s+([\w()V,\-+*/]+(?:\.(?=[0-9Z*+\-])[\w()V,\-+*/]+)*)|PIC(?:TURE)?\s+([\w()V,\-+*/]+(?:\.(?=[0-9Z*+\-])[\w()V,\-+*/]+)*)/i
+// de edición (Z, 9, *, $, etc.), es parte de la PIC. El `$` (símbolo de
+// moneda) va en el juego de caracteres: sin él, un `PIC $$,$$9.99` no
+// capturaba PIC y el campo se degradaba a un grupo de 0 bytes.
+const PIC_RE = /PIC(?:TURE)?\s+IS\s+([\w()V,\-+*/$]+(?:\.(?=[0-9Z*+\-$])[\w()V,\-+*/$]+)*)|PIC(?:TURE)?\s+([\w()V,\-+*/$]+(?:\.(?=[0-9Z*+\-$])[\w()V,\-+*/$]+)*)/i
 // El orden importa: las alternativas más largas van primero para que
 // PROCEDURE-POINTER no se lea como POINTER.
 const USAGE_RE = /(?:USAGE\s+IS\s+|USAGE\s+)?\b(COMPUTATIONAL-3|COMPUTATIONAL-2|COMPUTATIONAL-1|COMPUTATIONAL|COMP-3|COMP-2|COMP-1|COMP|BINARY|PACKED-DECIMAL|PROCEDURE-POINTER|FUNCTION-POINTER|POINTER|INDEX|DISPLAY)\b/i
 const REDEFINES_RE = /REDEFINES\s+([\w-]+)/i
-const OCCURS_RE = /OCCURS\s+(\d+)(?:\s+TO\s+(\d+))?\s+TIMES(?:\s+DEPENDING\s+ON\s+([\w-]+))?/i
+// TIMES es opcional en COBOL: `OCCURS 1 TO 10 DEPENDING ON X` (sin TIMES) es
+// la forma más habitual del OCCURS variable, y exigir TIMES dejaba el campo
+// sin reconocer — se trataba como una sola ocurrencia y descuadraba todos
+// los offsets siguientes.
+const OCCURS_RE = /OCCURS\s+(\d+)(?:\s+TO\s+(\d+))?(?:\s+TIMES)?(?:\s+DEPENDING\s+ON\s+([\w-]+))?/i
 const SIGN_SEPARATE_RE = /SIGN\s+IS\s+(?:LEADING|TRAILING)\s+SEPARATE/i
 const SYNC_RE = /(?<![\w-])(?:SYNCHRONIZED|SYNC)(?![\w-])/i
 const RENAMES_RE = /(?<![\w-])RENAMES\s+([\w-]+)(?:\s+(?:THRU|THROUGH)\s+([\w-]+))?/i

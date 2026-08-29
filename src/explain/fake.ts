@@ -19,5 +19,14 @@ export function createFakeProvider(cannedResponse = 'explicación de prueba'): F
       calls.push({ system, user })
       return cannedResponse
     },
+    async stream(system: string, user: string, onChunk: (chunk: string) => void): Promise<string> {
+      calls.push({ system, user })
+      // Trocea la respuesta en palabras para ejercitar el camino de streaming
+      // sin red: la GUI recibe fragmentos y el resultado final es el mismo.
+      for (const word of cannedResponse.split(/(\s+)/)) {
+        if (word !== '') onChunk(word)
+      }
+      return cannedResponse
+    },
   }
 }

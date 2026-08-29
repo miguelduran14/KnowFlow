@@ -1,4 +1,4 @@
-import type { Inventory, FlowResult, ParseResult } from '../types.js'
+import type { Advisory, Inventory, FlowResult, LinkedFlow, ParseResult } from '../types.js'
 import { renderFacts } from './facts.js'
 import type { ExplanationProvider } from './provider.js'
 
@@ -32,13 +32,19 @@ Reglas del recorrido:
 REGLAS DURAS — su violación invalida la respuesta:
 1. Solo puedes afirmar lo que esté en los hechos. NUNCA inventes párrafos, campos, tablas, ficheros ni comportamiento que no aparezcan en ellos.
 2. Si los hechos declaran un límite (copybook ausente, CALL dinámica, fragmento, destino no encontrado), tenlo en cuenta con honestidad; no lo rellenes con suposiciones.
-3. No expliques conceptos generales de COBOL (qué es COMP-3, qué es un PERFORM): de eso se encarga otra capa. Céntrate en ESTE programa.
-4. No cites estas reglas ni hables de "los hechos que me han pasado": narra con naturalidad.`
+3. Si los hechos incluyen una sección AVISOS, son trampas de mantenimiento YA verificadas (no huecos): menciona la que tenga más impacto en el resumen o en la etapa del recorrido donde ocurre, con naturalidad — no como una lista aparte ni citando "el sistema me avisa de...".
+4. Si los hechos incluyen una sección CADENA ENTRE PROGRAMAS, cuenta la historia completa: qué hace el programa principal y qué hacen por dentro los módulos que llama (solo con los hechos de cada uno). Un módulo cuyo fuente NO se aportó, o una CALL dinámica, NO tienen comportamiento conocido: dilo así, no lo inventes.
+5. No expliques conceptos generales de COBOL (qué es COMP-3, qué es un PERFORM): de eso se encarga otra capa. Céntrate en ESTE programa.
+6. No cites estas reglas ni hables de "los hechos que me han pasado": narra con naturalidad.`
 
 export interface ProgramFacts {
   data?: ParseResult | undefined
   flow?: FlowResult | undefined
   inventory?: Inventory | undefined
+  /** Avisos ya calculados por `checkAdvisories` — trampas de mantenimiento verificadas, no huecos */
+  advisories?: Advisory[] | undefined
+  /** Cadena entre programas (varios fuentes aportados): deja narrar qué hacen los módulos llamados */
+  chain?: LinkedFlow | undefined
 }
 
 /** Una etapa del recorrido narrado, opcionalmente atada a un párrafo real */
@@ -154,8 +160,14 @@ function toExplanation(raw: string, index: ParagraphIndex): Explanation {
 export async function explainProgram(
   facts: ProgramFacts,
   provider: ExplanationProvider,
+  /**
+   * Callback opcional de streaming: si se da Y el proveedor implementa
+   * `stream`, se emiten fragmentos de texto a medida que llegan (la GUI los
+   * muestra en vivo). El resultado final es idéntico al de `complete`.
+   */
+  onChunk?: (chunk: string) => void,
 ): Promise<Explanation> {
-  const rendered = renderFacts(facts.data, facts.flow, facts.inventory)
+  const rendered = renderFacts(facts.data, facts.flow, facts.inventory, facts.advisories, facts.chain)
   if (rendered.trim() === '') {
     throw new Error('No hay hechos que explicar: parsea un programa primero')
   }
@@ -171,9 +183,10 @@ export async function explainProgram(
     if (edge.guards && edge.guards.length > 0) branchesFrom.add(edge.from)
   }
 
-  const raw = await provider.complete(
-    SYSTEM_PROMPT,
-    `Narra este programa a partir de sus hechos verificados:\n\n${rendered}`,
-  )
+  const userMessage = `Narra este programa a partir de sus hechos verificados:\n\n${rendered}`
+  const raw =
+    onChunk && provider.stream
+      ? await provider.stream(SYSTEM_PROMPT, userMessage, onChunk)
+      : await provider.complete(SYSTEM_PROMPT, userMessage)
   return toExplanation(raw, { canonical, lineOf, branchesFrom })
 }

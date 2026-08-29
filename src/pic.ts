@@ -18,7 +18,7 @@ export interface ParsePicOptions {
  * "X(10)" → "XXXXXXXXXX", "9(3)V9(2)" → "999V99"
  */
 function expandPic(raw: string): string {
-  return raw.replace(/([XABSV9P0Z*+\-,./])\((\d+)\)/gi, (_m, ch: string, n: string) =>
+  return raw.replace(/([XABSV9P0Z*+\-,./$])\((\d+)\)/gi, (_m, ch: string, n: string) =>
     ch.repeat(Number(n)),
   )
 }
@@ -42,8 +42,8 @@ function binarySize(totalDigits: number): number {
  * Determina si un PIC expandido es numérico, editado-numérico o alfanumérico.
  * Numérico puro: solo 9, S, V, P.
  * Editado numérico: contiene algún carácter de edición — Z y * (supresión),
- * + y - (signo), coma, punto, barra, B (espacio), 0 (inserción de cero), o
- * los sufijos CR/DB.
+ * + y - (signo), $ (moneda), coma, punto, barra, B (espacio), 0 (inserción
+ * de cero), o los sufijos CR/DB.
  * Alfanumérico: contiene X o A.
  *
  * Se ejecuta sobre el PIC ya expandido, así que el 0 de `9(10)` no llega
@@ -51,7 +51,7 @@ function binarySize(totalDigits: number): number {
  */
 function classifyPic(expanded: string): 'numeric' | 'numeric-edited' | 'alphanumeric' {
   if (/[XA]/i.test(expanded)) return 'alphanumeric'
-  if (/[Z*+\-,./B0]|CR|DB/i.test(expanded)) return 'numeric-edited'
+  if (/[Z*+\-,./B0$]|CR|DB/i.test(expanded)) return 'numeric-edited'
   return 'numeric'
 }
 

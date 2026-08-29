@@ -5,6 +5,7 @@ import { explainProgram, SYSTEM_PROMPT } from '../src/explain/explain.js'
 import { factsFidelity, renderFacts } from '../src/explain/facts.js'
 import { createFakeProvider } from '../src/explain/fake.js'
 import { parseFlow } from '../src/flow-parser.js'
+import { linkPrograms } from '../src/linker.js'
 import { parse } from '../src/parser.js'
 
 const FIXTURES = join(import.meta.dirname, 'fixtures')
@@ -50,6 +51,65 @@ describe('renderFacts', () => {
     const facts = renderFacts(undefined, flow)
 
     expect(facts).toContain('FRAGMENTO sin PROCEDURE DIVISION')
+  })
+
+  it('renders advisories in a section distinct from the verification limits', () => {
+    const flow = parseFlow(readFixture('flow', 'perform-basic', 'main.cbl'))
+    const facts = renderFacts(undefined, flow, undefined, [
+      {
+        rule: 'sql-write-without-where',
+        title: 'UPDATE sin WHERE',
+        message: 'UPDATE sin cláusula WHERE visible en el bloque: afecta a TODAS las filas.',
+        line: 5,
+        paragraph: 'MAIN-PARA',
+      },
+    ])
+
+    expect(facts).toContain('## AVISOS')
+    expect(facts).toContain('L5 (MAIN-PARA): UPDATE sin cláusula WHERE visible en el bloque')
+    expect(facts).not.toContain('## LÍMITES DE LO VERIFICADO')
+  })
+
+  it('omits the advisories section when there are none', () => {
+    const flow = parseFlow(readFixture('flow', 'perform-basic', 'main.cbl'))
+    const facts = renderFacts(undefined, flow, undefined, [])
+
+    expect(facts).not.toContain('## AVISOS')
+  })
+
+  it('narrates the chain: cross-program calls and what each supplied module does', () => {
+    const sources = new Map<string, string>([
+      ['MAINPROG.cbl', readFixture('chain', 'three-programs', 'MAINPROG.cbl')],
+      ['VALIDPRG.cbl', readFixture('chain', 'three-programs', 'VALIDPRG.cbl')],
+    ])
+    const linked = linkPrograms(sources)
+    const mainFlow = parseFlow(readFixture('chain', 'three-programs', 'MAINPROG.cbl'))
+    const facts = renderFacts(undefined, mainFlow, undefined, undefined, linked)
+
+    expect(facts).toContain('## CADENA ENTRE PROGRAMAS')
+    // La CALL a un programa aportado se marca como tal.
+    expect(facts).toContain('MAINPROG · MAIN-PARA -> VALIDPRG [fuente aportado]')
+    // El interior del módulo llamado se describe con SUS hechos.
+    expect(facts).toContain('Programa VALIDPRG (aportado)')
+    expect(facts).toContain('CHECK-PARA')
+    expect(facts).toContain('VALIDPRG · CHECK-PARA -> AUDITPRG')
+    // El principal NO se re-describe en la sección de cadena (ya está en FLUJO).
+    expect(facts).not.toContain('Programa MAINPROG (aportado)')
+    // Módulos no aportados: marcados como hueco honesto.
+    expect(facts).toContain('## LÍMITES DE LO VERIFICADO')
+    expect(facts).toContain('ABSENTPR')
+    expect(facts).toContain('AUDITPRG')
+  })
+
+  it('adds no chain section for a single program with no cross-calls', () => {
+    const sources = new Map<string, string>([
+      ['solo.cbl', readFixture('flow', 'perform-basic', 'main.cbl')],
+    ])
+    const linked = linkPrograms(sources)
+    const flow = parseFlow(readFixture('flow', 'perform-basic', 'main.cbl'))
+    const facts = renderFacts(undefined, flow, undefined, undefined, linked)
+
+    expect(facts).not.toContain('## CADENA ENTRE PROGRAMAS')
   })
 })
 
@@ -164,6 +224,23 @@ describe('explainProgram', () => {
 
     expect(result.structured).toBe(true)
     expect(result.summary).toBe('Con vallas.')
+  })
+
+  it('con onChunk usa el streaming del proveedor y el resultado final es el mismo', async () => {
+    const flow = parseFlow(readFixture('flow', 'perform-basic', 'main.cbl'))
+    const provider = createFakeProvider(
+      JSON.stringify({ summary: 'Resumen en streaming.', walkthrough: [] }),
+    )
+
+    const chunks: string[] = []
+    const result = await explainProgram({ flow }, provider, c => chunks.push(c))
+
+    // Se emitieron fragmentos y, unidos, forman la respuesta completa.
+    expect(chunks.length).toBeGreaterThan(1)
+    expect(chunks.join('')).toContain('Resumen en streaming.')
+    // La estructura final es idéntica a la del camino sin streaming.
+    expect(result.structured).toBe(true)
+    expect(result.summary).toBe('Resumen en streaming.')
   })
 
   it('never sends raw source, only rendered facts', async () => {

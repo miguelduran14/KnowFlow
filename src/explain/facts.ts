@@ -1,4 +1,4 @@
-import type { Inventory, FlowResult, ParseResult, SchemaField } from '../types.js'
+import type { Advisory, Inventory, FlowResult, LinkedFlow, ParseResult, SchemaField } from '../types.js'
 
 /**
  * Nivel de fidelidad de un conjunto de hechos (ADR-0003). Nivel 3 (solo
@@ -93,6 +93,8 @@ export function renderFacts(
   data: ParseResult | undefined,
   flow: FlowResult | undefined,
   inventory?: Inventory | undefined,
+  advisories?: Advisory[] | undefined,
+  chain?: LinkedFlow | undefined,
 ): string {
   const out: string[] = []
 
@@ -208,6 +210,58 @@ export function renderFacts(
   // límites daría un documento que parece analizable pero está vacío.
   if (!flowHasFacts && !dataHasFacts && !inventoryHasFacts) return ''
 
+  // Cadena entre programas: cuando el usuario aporta varios fuentes, el
+  // modelo recibe también los hechos de flujo de los OTROS programas (no el
+  // principal, cuyo detalle ya está en FLUJO) para poder narrar la historia
+  // completa — "este llama a X, que hace Y". Todo son hechos del parser; los
+  // módulos no aportados y los destinos dinámicos quedan marcados abajo.
+  const chainHasFacts = chain !== undefined && (chain.calls.length > 0 || chain.programs.length > 1)
+  if (chain && chainHasFacts) {
+    out.push('')
+    out.push('## CADENA ENTRE PROGRAMAS (verificado por parser)')
+    if (chain.calls.length > 0) {
+      out.push('Llamadas que cruzan de un programa a otro:')
+      for (const call of chain.calls) {
+        const mark = call.dynamic
+          ? '[dinámica: destino real solo en ejecución]'
+          : call.resolved
+            ? '[fuente aportado]'
+            : '[fuente NO aportado]'
+        out.push(`- L${call.line}: ${call.fromProgram} · ${call.fromParagraph} -> ${call.toProgram} ${mark}`)
+      }
+    }
+    for (const program of chain.programs) {
+      // El principal ya está detallado en FLUJO; aquí solo los demás.
+      if (flow?.programId && program.name === flow.programId) continue
+      const paras = program.flow.paragraphs.filter(p => !p.implicit)
+      if (paras.length === 0 && program.flow.edges.length === 0) continue
+      out.push(`Programa ${program.name} (aportado) — qué hace por dentro:`)
+      if (paras.length > 0) {
+        out.push(
+          '  Párrafos: ' + paras.map(p => p.name + (p.terminates ? ' [termina]' : '')).join(', '),
+        )
+      }
+      for (const edge of program.flow.edges) {
+        if (edge.kind !== 'perform' && edge.kind !== 'call' && edge.kind !== 'goto') continue
+        const guard = edge.guards ? ` [solo si ${edge.guards.join(' AND ')}]` : ''
+        out.push(
+          `  - ${edge.from} -> ${edge.to} (${edge.kind.toUpperCase()}${edge.dynamic ? ' dinámica' : ''}${guard})`,
+        )
+      }
+    }
+  }
+
+  // Distinta de LÍMITES DE LO VERIFICADO: un aviso es sobre un hecho que SÍ
+  // está verificado, pero es una trampa de mantenimiento conocida (ver
+  // `Advisory` en types.ts). Verificado y arriesgado no son lo mismo.
+  if (advisories && advisories.length > 0) {
+    out.push('')
+    out.push('## AVISOS — trampas de mantenimiento verificadas (no límites de fidelidad)')
+    for (const advisory of advisories) {
+      out.push(`- L${advisory.line}${advisory.paragraph ? ` (${advisory.paragraph})` : ''}: ${advisory.message}`)
+    }
+  }
+
   const gaps: string[] = []
   if (flow?.fragment) {
     gaps.push('El fuente es un FRAGMENTO sin PROCEDURE DIVISION: fidelidad parcialmente verificada.')
@@ -239,6 +293,9 @@ export function renderFacts(
         `EXEC ${exec.kind.toUpperCase()} ${exec.verb} en L${exec.line}: el recurso (tabla o fichero/programa CICS) es una variable, no se conoce en el fuente.`,
       )
     }
+  }
+  for (const program of chain?.missingPrograms ?? []) {
+    gaps.push(`El programa ${program} se llama con CALL literal pero su fuente NO se ha aportado: su comportamiento es desconocido.`)
   }
   if (gaps.length > 0) {
     out.push('')

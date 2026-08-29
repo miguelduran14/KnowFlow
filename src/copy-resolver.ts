@@ -10,7 +10,12 @@ export interface CopyResolutionResult {
   missingCopybooks: string[]
 }
 
-const COPY_RE = /^COPY\s+([\w-]+)(?:\s+REPLACING\s+(.+?))?\s*\.\s*$/i
+// `COPY member [OF|IN library] [REPLACING ...].` La biblioteca (OF/IN) se
+// reconoce pero se descarta: KnowFlow identifica los copybooks por nombre de
+// member, no por biblioteca. Sin admitir OF/IN, un `COPY CUSTREC OF MYLIB.`
+// no casaba con COPY_RE y se perdía en silencio — ni resuelto ni marcado
+// como hueco, violando el contrato de fidelidad (ADR-0003).
+const COPY_RE = /^COPY\s+([\w-]+)(?:\s+(?:OF|IN)\s+[\w-]+)?(?:\s+REPLACING\s+(.+?))?\s*\.\s*$/i
 const EXEC_SQL_INCLUDE_RE = /^EXEC\s+SQL\s+INCLUDE\s+([\w-]+)\s+END-EXEC\s*\.?\s*$/i
 
 interface Replacement {
