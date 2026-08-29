@@ -9,8 +9,9 @@ import {
   type ProgramFacts,
   type WalkthroughStep,
 } from 'knowflow'
-import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { CheckCircle, Eye, EyeSlash, FloppyDisk, Trash } from '@phosphor-icons/react'
+import { motion, useReducedMotion, type Variants } from 'framer-motion'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GlossaryText } from './glossary.js'
 
 type ProviderKind = 'claude' | 'corporate'
@@ -23,7 +24,79 @@ const STORE = {
   corpModel: 'knowflow.corp.model',
   corpEndpoint: 'knowflow.corp.endpoint',
   corpAuthName: 'knowflow.corp.authName',
+  profiles: 'knowflow.connProfiles',
 } as const
+
+/**
+ * Un perfil de conexión guardado: una combinación con nombre de proveedor +
+ * clave + modelo + endpoint. Evita volver a teclear la configuración al
+ * alternar entre, p. ej., una clave personal de Claude y un gateway
+ * corporativo. Vive en localStorage como el resto de la config BYOK — nada
+ * sale de la máquina.
+ */
+interface ConnProfile {
+  id: string
+  name: string
+  kind: ProviderKind
+  apiKey: string
+  model: string
+  corpKey: string
+  corpModel: string
+  corpEndpoint: string
+  corpAuthName: string
+}
+
+function loadProfiles(): ConnProfile[] {
+  try {
+    const raw = localStorage.getItem(STORE.profiles)
+    const parsed: unknown = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? (parsed as ConnProfile[]) : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Campo de clave con botón de mostrar/ocultar. La clave ya se guarda en
+ * localStorage al escribir, pero el campo de contraseña (puntos) no deja
+ * verla — así el usuario confirma que sigue ahí y no la vuelve a pegar.
+ */
+function SecretField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string | undefined
+}) {
+  const [show, setShow] = useState(false)
+  return (
+    <label>
+      {label}
+      <span className="secret">
+        <input
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete="off"
+        />
+        <button
+          type="button"
+          className="secret__toggle"
+          onClick={() => setShow(s => !s)}
+          aria-label={show ? 'Ocultar clave' : 'Mostrar clave'}
+          title={show ? 'Ocultar' : 'Mostrar'}
+        >
+          {show ? <EyeSlash size={15} /> : <Eye size={15} />}
+        </button>
+      </span>
+    </label>
+  )
+}
 
 /**
  * Placeholder animado mientras la IA responde. Muestra la estructura del
@@ -150,18 +223,38 @@ export function ExplainPanel({
     () => localStorage.getItem(STORE.corpAuthName) ?? 'Authorization',
   )
 
+  // Perfiles de conexión guardados y cuál está aplicado. El nombrado en curso
+  // (`naming`) muestra un pequeño campo inline en lugar de un prompt del
+  // navegador.
+  const [profiles, setProfiles] = useState<ConnProfile[]>(loadProfiles)
+  const [activeProfileId, setActiveProfileId] = useState<string | undefined>()
+  const [naming, setNaming] = useState(false)
+  const [draftName, setDraftName] = useState('')
+
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | undefined>()
   const [hovered, setHovered] = useState<string | undefined>()
+  // Texto que va llegando en streaming, antes de tener la estructura final.
+  const [streamingText, setStreamingText] = useState('')
 
   const fidelity = useMemo(() => factsFidelity(facts.data, facts.flow, facts.inventory), [facts])
 
   // Una explicación pertenece a los hechos con los que se generó: si el
   // fuente cambia, la anterior sería una afirmación falsa del programa nuevo.
+  // Se omite el primer pase (montaje): ExplainPanel se desmonta al cambiar
+  // de pestaña, así que un simple "cambiaron las deps" en el efecto de
+  // montaje borraría, al volver, una explicación que sigue siendo válida
+  // (vive levantada en App, ver el comentario de la prop `explanation`).
+  const firstFacts = useRef(true)
   useEffect(() => {
+    if (firstFacts.current) {
+      firstFacts.current = false
+      return
+    }
     onExplanation(undefined)
     setError(undefined)
     setHovered(undefined)
+    setStreamingText('')
   }, [facts, onExplanation])
 
   const persist = useCallback((storeKey: string, value: string, set: (v: string) => void) => {
@@ -173,6 +266,60 @@ export function ExplainPanel({
     setKind(value)
     localStorage.setItem(STORE.kind, value)
   }, [])
+
+  const writeProfiles = useCallback((next: ConnProfile[]) => {
+    setProfiles(next)
+    try {
+      localStorage.setItem(STORE.profiles, JSON.stringify(next))
+    } catch {
+      // Cuota excedida: los perfiles no persisten, pero la sesión sigue.
+    }
+  }, [])
+
+  // Aplica un perfil guardado: vuelca sus campos al estado y a las claves
+  // individuales de STORE (así el resto de la lógica —`ready`, `explain`—
+  // sigue leyendo de un solo sitio) y lo marca como activo.
+  const applyProfile = useCallback(
+    (p: ConnProfile) => {
+      chooseKind(p.kind)
+      persist(STORE.key, p.apiKey, setApiKey)
+      persist(STORE.model, p.model || DEFAULT_CLAUDE_MODEL, setModel)
+      persist(STORE.corpKey, p.corpKey, setCorpKey)
+      persist(STORE.corpModel, p.corpModel, setCorpModel)
+      persist(STORE.corpEndpoint, p.corpEndpoint, setCorpEndpoint)
+      persist(STORE.corpAuthName, p.corpAuthName || 'Authorization', setCorpAuthName)
+      setActiveProfileId(p.id)
+    },
+    [chooseKind, persist],
+  )
+
+  // Guarda la configuración actual como perfil. Si ya existe uno con el mismo
+  // nombre (case-insensitive), lo actualiza en vez de duplicarlo.
+  const commitProfile = useCallback(() => {
+    const name = draftName.trim()
+    if (name === '') return
+    const snapshot = { kind, apiKey, model, corpKey, corpModel, corpEndpoint, corpAuthName }
+    const existing = profiles.find(p => p.name.toLowerCase() === name.toLowerCase())
+    const id = existing ? existing.id : `p${Date.now().toString(36)}`
+    const profile: ConnProfile = { id, name, ...snapshot }
+    const next = existing
+      ? profiles.map(p => (p.id === id ? profile : p))
+      : [...profiles, profile]
+    writeProfiles(next)
+    setActiveProfileId(id)
+    setNaming(false)
+    setDraftName('')
+  }, [draftName, kind, apiKey, model, corpKey, corpModel, corpEndpoint, corpAuthName, profiles, writeProfiles])
+
+  const deleteProfile = useCallback(
+    (id: string) => {
+      writeProfiles(profiles.filter(p => p.id !== id))
+      setActiveProfileId(cur => (cur === id ? undefined : cur))
+    },
+    [profiles, writeProfiles],
+  )
+
+  const activeProfile = profiles.find(p => p.id === activeProfileId)
 
   const corpAuth =
     corpAuthName.toLowerCase() === 'authorization'
@@ -187,6 +334,7 @@ export function ExplainPanel({
   const explain = useCallback(() => {
     setBusy(true)
     setError(undefined)
+    setStreamingText('')
     const provider: ExplanationProvider =
       kind === 'claude'
         ? createClaudeProvider({ apiKey, model: model || DEFAULT_CLAUDE_MODEL })
@@ -197,7 +345,9 @@ export function ExplainPanel({
             model: corpModel,
             auth: corpAuth,
           })
-    explainProgram(facts, provider)
+    // Streaming: el texto se va acumulando y mostrando en vivo; al terminar,
+    // explainProgram devuelve la estructura ya validada contra los párrafos.
+    explainProgram(facts, provider, chunk => setStreamingText(prev => prev + chunk))
       .then(onExplanation)
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setBusy(false))
@@ -218,30 +368,113 @@ export function ExplainPanel({
 
   return (
     <div className="explain">
-      <div className="explain__providers">
-        <button className={kind === 'claude' ? 'prov prov--active' : 'prov'} onClick={() => chooseKind('claude')}>
-          Claude (Anthropic)
-        </button>
-        <button
-          className={kind === 'corporate' ? 'prov prov--active' : 'prov'}
-          onClick={() => chooseKind('corporate')}
-        >
-          IA corporativa
-        </button>
-      </div>
+      <section className="explain__setup" aria-label="Configuración del proveedor">
+        <div className="conn-profiles">
+          <label className="conn-profiles__field">
+            <span className="conn-profiles__label">Perfil</span>
+            <select
+              className="conn-profiles__select"
+              value={activeProfileId ?? ''}
+              onChange={e => {
+                const p = profiles.find(x => x.id === e.target.value)
+                if (p) applyProfile(p)
+                else setActiveProfileId(undefined)
+              }}
+              aria-label="Elegir un perfil de conexión guardado"
+            >
+              <option value="">
+                {profiles.length ? 'Elegir guardado…' : 'Sin perfiles guardados'}
+              </option>
+              {profiles.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {naming ? (
+            <span className="conn-profiles__namer">
+              <input
+                autoFocus
+                value={draftName}
+                onChange={e => setDraftName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') commitProfile()
+                  else if (e.key === 'Escape') {
+                    setNaming(false)
+                    setDraftName('')
+                  }
+                }}
+                placeholder="Nombre del perfil"
+                aria-label="Nombre del perfil"
+              />
+              <button className="conn-profiles__ok" onClick={commitProfile} title="Guardar perfil">
+                <CheckCircle size={15} weight="fill" />
+              </button>
+              <button
+                className="conn-profiles__cancel"
+                onClick={() => {
+                  setNaming(false)
+                  setDraftName('')
+                }}
+                title="Cancelar"
+                aria-label="Cancelar"
+              >
+                ×
+              </button>
+            </span>
+          ) : (
+            <>
+              <button
+                className="conn-profiles__save"
+                onClick={() => {
+                  setDraftName(activeProfile?.name ?? '')
+                  setNaming(true)
+                }}
+                title="Guardar la configuración actual como un perfil"
+              >
+                <FloppyDisk size={14} weight="bold" /> Guardar
+              </button>
+              {activeProfileId && (
+                <button
+                  className="conn-profiles__del"
+                  onClick={() => deleteProfile(activeProfileId)}
+                  title="Borrar este perfil"
+                  aria-label="Borrar este perfil"
+                >
+                  <Trash size={14} />
+                </button>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="explain__providers" role="group" aria-label="Proveedor de IA">
+          <button
+            className={kind === 'claude' ? 'prov prov--active' : 'prov'}
+            onClick={() => chooseKind('claude')}
+            aria-pressed={kind === 'claude'}
+          >
+            Claude (Anthropic)
+          </button>
+          <button
+            className={kind === 'corporate' ? 'prov prov--active' : 'prov'}
+            onClick={() => chooseKind('corporate')}
+            aria-pressed={kind === 'corporate'}
+          >
+            IA corporativa
+          </button>
+        </div>
 
       {kind === 'claude' ? (
         <div className="explain__config">
-          <label>
-            Clave API (Anthropic)
-            <input
-              type="password"
-              value={apiKey}
-              onChange={e => persist(STORE.key, e.target.value, setApiKey)}
-              placeholder="sk-ant-…"
-              autoComplete="off"
-            />
-          </label>
+          <SecretField
+            label="Clave API (Anthropic)"
+            value={apiKey}
+            onChange={v => persist(STORE.key, v, setApiKey)}
+            placeholder="sk-ant-…"
+          />
           <label>
             Modelo
             <input type="text" value={model} onChange={e => persist(STORE.model, e.target.value, setModel)} />
@@ -268,15 +501,11 @@ export function ExplainPanel({
               placeholder="p. ej. codex, axet-1"
             />
           </label>
-          <label>
-            Clave / token
-            <input
-              type="password"
-              value={corpKey}
-              onChange={e => persist(STORE.corpKey, e.target.value, setCorpKey)}
-              autoComplete="off"
-            />
-          </label>
+          <SecretField
+            label="Clave / token"
+            value={corpKey}
+            onChange={v => persist(STORE.corpKey, v, setCorpKey)}
+          />
           <label>
             Cabecera de auth
             <input
@@ -289,44 +518,52 @@ export function ExplainPanel({
         </div>
       )}
 
-      <button className="explain__go" onClick={explain} disabled={busy || !ready}>
-        {busy ? 'Explicando…' : 'Explicar programa'}
-      </button>
-
-      <p className="explain__byok">
-        BYOK: tus credenciales se guardan solo en este navegador (localStorage) y la llamada va
-        directa de tu máquina al proveedor que configures — el código no pasa por ningún servidor de
-        KnowFlow. El modelo recibe únicamente los hechos verificados por el parser, nunca el código
-        fuente crudo.
-        {kind === 'corporate' && (
-          <>
-            {' '}
-            <strong>
-              Enviar COBOL de clientes por cualquier endpoint, corporativo incluido, sigue siendo tu
-              decisión y responsabilidad: úsalo solo con código sintético/público o por un canal
-              sancionado para ese código.
-            </strong>
-          </>
-        )}
-      </p>
+        <div className="explain__actions">
+          <button className="explain__go" onClick={explain} disabled={busy || !ready}>
+            {busy ? 'Explicando…' : 'Explicar programa'}
+          </button>
+          {ready && (
+            <span className="explain__saved">
+              <CheckCircle size={14} weight="fill" /> Configuración guardada en este navegador
+            </span>
+          )}
+        </div>
+      </section>
 
       {error && <div className="explain__error">{error}</div>}
 
-      {busy && !explanation && <DossierSkeleton reduce={!!reduce} />}
+      {/* Mientras llega la respuesta: si ya hay texto en streaming se muestra
+          en vivo (con cursor), y si no, el esqueleto para que la espera no
+          quede vacía. Al completar, la vista salta a la versión estructurada. */}
+      {busy && !explanation && streamingText === '' && <DossierSkeleton reduce={!!reduce} />}
+      {busy && !explanation && streamingText !== '' && (
+        <div className="dossier dossier--streaming" aria-live="polite" aria-busy="true">
+          <div className="explain__badge explain__badge--streaming">Generando la explicación…</div>
+          <p className="dossier__streamtext">
+            {streamingText}
+            <span className="dossier__caret" aria-hidden="true" />
+          </p>
+        </div>
+      )}
 
-      <AnimatePresence mode="wait">
-        {explanation && (
+      {/* Sin AnimatePresence: con `explanation` pasando a undefined al cambiar
+          de fuente, AnimatePresence esperaba una salida (exit) que a veces no
+          terminaba — el dossier viejo se quedaba visible en el DOM aunque el
+          estado ya estuviera vacío. Mismo bug ya resuelto así en el cajón del
+          glosario (ver glossary.tsx): se prefiere una desaparición inmediata
+          y garantizada a una salida suave que a veces no ocurre. Solo queda
+          la animación de ENTRADA (initial→animate). */}
+      {explanation && (
           <motion.article
             key="result"
             className="dossier"
             initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            {...(reduce ? {} : { exit: { opacity: 0 } })}
           >
             <div className={`explain__badge explain__badge--${fidelity.level}`}>
               {fidelity.level === 'verified'
                 ? 'Prosa generada por IA sobre hechos verificados por el parser. Los hechos están verificados; la redacción, júzgala tú.'
-                : `Prosa sobre hechos PARCIALMENTE verificados: ${fidelity.reasons.join('; ')}.`}
+                : `Prosa sobre hechos parcialmente verificados — ${fidelity.reasons.join('; ')}.`}
             </div>
 
             {explanation.structured ? (
@@ -406,8 +643,7 @@ export function ExplainPanel({
               <pre className="dossier__raw">{explanation.raw}</pre>
             )}
           </motion.article>
-        )}
-      </AnimatePresence>
+      )}
     </div>
   )
 }
