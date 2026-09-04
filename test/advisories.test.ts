@@ -385,3 +385,118 @@ describe('avisos: ALTER', () => {
     expect(rules(analyze(source))).not.toContain('alter-statement')
   })
 })
+
+describe('avisos: código muerto', () => {
+  it('marca un párrafo inalcanzable', () => {
+    const source = [
+      '       IDENTIFICATION DIVISION.',
+      '       PROGRAM-ID. DEAD.',
+      '       PROCEDURE DIVISION.',
+      '       MAIN-PARA.',
+      '           PERFORM USED-PARA',
+      '           STOP RUN.',
+      '       USED-PARA.',
+      "           DISPLAY 'X'",
+      '           GOBACK.',
+      '       DEAD-PARA.',
+      "           DISPLAY 'DEAD'.",
+    ].join('\n')
+    const advisories = analyze(source)
+    expect(rules(advisories)).toContain('unreachable-paragraph')
+    const hit = advisories.find(a => a.rule === 'unreachable-paragraph')!
+    expect(hit.paragraph).toBe('DEAD-PARA')
+  })
+
+  it('no marca un párrafo alcanzable por caída natural', () => {
+    const source = [
+      '       PROCEDURE DIVISION.',
+      '       MAIN-PARA.',
+      '           PERFORM A-PARA',
+      '           STOP RUN.',
+      '       A-PARA.',
+      "           DISPLAY 'A'.",
+      '       B-PARA.',
+      "           DISPLAY 'B'.",
+    ].join('\n')
+    // B-PARA se alcanza por caída natural desde A-PARA.
+    expect(rules(analyze(source))).not.toContain('unreachable-paragraph')
+  })
+
+  it('no marca inalcanzables si la PROCEDURE tiene un COPY (flujo incompleto)', () => {
+    const source = [
+      '       PROCEDURE DIVISION.',
+      '       MAIN-PARA.',
+      '           COPY EXTRA.',
+      '           STOP RUN.',
+      '       DEAD-PARA.',
+      "           DISPLAY 'D'.",
+    ].join('\n')
+    expect(rules(analyze(source))).not.toContain('unreachable-paragraph')
+  })
+
+  it('no marca inalcanzables si hay un ALTER (redirige en ejecución)', () => {
+    const source = [
+      '       PROCEDURE DIVISION.',
+      '       MAIN-PARA.',
+      '           ALTER SW TO PROCEED TO DEAD-PARA',
+      '           STOP RUN.',
+      '       DEAD-PARA.',
+      "           DISPLAY 'D'.",
+    ].join('\n')
+    expect(rules(analyze(source))).not.toContain('unreachable-paragraph')
+  })
+
+  it('marca un cursor declarado y sin usar', () => {
+    const source = [
+      '       WORKING-STORAGE SECTION.',
+      '           EXEC SQL DECLARE C1 CURSOR FOR SELECT A FROM T END-EXEC.',
+      '       PROCEDURE DIVISION.',
+      '       MAIN-PARA.',
+      '           STOP RUN.',
+    ].join('\n')
+    expect(rules(analyze(source))).toContain('unused-cursor')
+  })
+
+  it('no marca un cursor que sí se usa', () => {
+    const source = [
+      '       WORKING-STORAGE SECTION.',
+      '           EXEC SQL DECLARE C1 CURSOR FOR SELECT A FROM T END-EXEC.',
+      '       PROCEDURE DIVISION.',
+      '       MAIN-PARA.',
+      '           EXEC SQL OPEN C1 END-EXEC',
+      '           EXEC SQL FETCH C1 INTO :WS-A END-EXEC',
+      '           EXEC SQL CLOSE C1 END-EXEC',
+      '           STOP RUN.',
+    ].join('\n')
+    expect(rules(analyze(source))).not.toContain('unused-cursor')
+  })
+
+  it('marca un fichero declarado y sin operaciones', () => {
+    const source = [
+      '       ENVIRONMENT DIVISION.',
+      '       INPUT-OUTPUT SECTION.',
+      '       FILE-CONTROL.',
+      '           SELECT UNUSED-FILE ASSIGN TO UNUDD.',
+      '       PROCEDURE DIVISION.',
+      '       MAIN-PARA.',
+      '           STOP RUN.',
+    ].join('\n')
+    const advisories = analyze(source)
+    expect(rules(advisories)).toContain('unused-file')
+    expect(advisories.find(a => a.rule === 'unused-file')!.title).toContain('UNUSED-FILE')
+  })
+
+  it('no marca un fichero que sí se usa', () => {
+    const source = [
+      '       ENVIRONMENT DIVISION.',
+      '       INPUT-OUTPUT SECTION.',
+      '       FILE-CONTROL.',
+      '           SELECT MOV-FILE ASSIGN TO MOVDD.',
+      '       PROCEDURE DIVISION.',
+      '       MAIN-PARA.',
+      '           OPEN INPUT MOV-FILE',
+      '           STOP RUN.',
+    ].join('\n')
+    expect(rules(analyze(source))).not.toContain('unused-file')
+  })
+})

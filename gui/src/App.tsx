@@ -33,8 +33,9 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type
 import { AdvisoriesPanel } from './AdvisoriesPanel.js'
 import { DataPanel } from './DataPanel.js'
 import { ExplainPanel } from './ExplainPanel.js'
-import { GlossaryProvider, useGlossary } from './glossary.js'
+import { GlossaryProvider } from './glossary.js'
 import { InventoryPanel } from './InventoryPanel.js'
+import { PrivacyBadge } from './PrivacyBadge.js'
 
 // Los lienzos arrastran elkjs (~500 KB) y @xyflow/react: se cargan bajo
 // demanda (code-splitting) para que el arranque no pague ese peso hasta que
@@ -176,21 +177,6 @@ function ThemeToggle() {
     >
       {effective === 'dark' ? <Moon size={17} weight="fill" /> : <Sun size={17} weight="fill" />}
     </button>
-  )
-}
-
-/** Toggle del modo aprendiz — consume el contexto del glosario. */
-function LearnToggle() {
-  const { learn, setLearn } = useGlossary()
-  return (
-    <label
-      className="learn-toggle"
-      title="Resalta los términos COBOL y activa la ayuda al pasar el ratón"
-    >
-      <input type="checkbox" checked={learn} onChange={e => setLearn(e.target.checked)} />
-      <span className="learn-toggle__track" />
-      <span className="learn-toggle__label">Modo aprendiz</span>
-    </label>
   )
 }
 
@@ -594,7 +580,7 @@ function AppShell() {
           <span className="brand__tag">comprensión de COBOL, verificada por parser</span>
         </div>
         <div className="actions">
-          {hasSource && <LearnToggle />}
+          <PrivacyBadge />
           <ThemeToggle />
           {!hasSource ? (
             <button className="btn" onClick={() => setSource(SAMPLE)}>
@@ -905,9 +891,15 @@ function ActiveView({
     )
   }
   if (view === 'data') return data ? <DataPanel data={data} /> : null
-  if (view === 'inventory') return inventory ? <InventoryPanel inventory={inventory} /> : null
+  if (view === 'inventory') return inventory ? <InventoryPanel inventory={inventory} onOpenCode={onOpenCode} /> : null
   if (view === 'advisories') {
-    return <AdvisoriesPanel advisories={advisories} onJumpToParagraph={onJumpToParagraph} />
+    return (
+      <AdvisoriesPanel
+        advisories={advisories}
+        onJumpToParagraph={onJumpToParagraph}
+        onOpenCode={onOpenCode}
+      />
+    )
   }
   return (
     <ExplainPanel

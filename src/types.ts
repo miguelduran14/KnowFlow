@@ -365,6 +365,9 @@ export type AdvisoryRule =
   | 'cursor-opened-not-closed'
   | 'cursor-fetched-without-open'
   | 'alter-statement'
+  | 'unreachable-paragraph'
+  | 'unused-cursor'
+  | 'unused-file'
 
 /** Un aviso concreto, anclado a la línea del fuente que lo dispara */
 export interface Advisory {

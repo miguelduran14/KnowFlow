@@ -3,16 +3,20 @@ import {
   Controls,
   Handle,
   MarkerType,
+  Panel,
   Position,
   ReactFlow,
+  ReactFlowProvider,
+  useUpdateNodeInternals,
   type Edge,
   type Node,
   type NodeProps,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import type { LinkedFlow } from 'knowflow'
-import { useEffect, useState } from 'react'
-import { layoutChain, type ChainNode } from './layout.js'
+import { useEffect, useMemo, useState } from 'react'
+import { layoutChain, type ChainEdge, type ChainNode } from './layout.js'
+import { useThemeTokens } from './theme.js'
 
 type ProgramNode = Node<{ chain: ChainNode }, 'program'>
 
@@ -34,9 +38,49 @@ function ProgramNodeView({ data }: NodeProps<ProgramNode>) {
 
 const nodeTypes = { program: ProgramNodeView }
 
-export function ChainCanvas({ linked }: { linked: LinkedFlow }) {
+/** Leyenda del código de color de las aristas de la cadena. */
+function ChainLegend({ colors }: { colors: { resolved: string; missing: string; dynamic: string } }) {
+  const line = (color: string, label: string, dashed?: boolean) => (
+    <span className="leg-row">
+      <span
+        className="leg-line"
+        style={
+          dashed
+            ? { backgroundImage: `repeating-linear-gradient(90deg, ${color} 0 4px, transparent 4px 7px)` }
+            : { background: color }
+        }
+      />
+      {label}
+    </span>
+  )
+  return (
+    <div className="chain-legend">
+      {line(colors.resolved, 'CALL resuelta (programa aportado)')}
+      {line(colors.missing, 'fuente no aportado')}
+      {line(colors.dynamic, 'CALL dinámica (destino en ejecución)', true)}
+    </div>
+  )
+}
+
+function ChainCanvasInner({ linked }: { linked: LinkedFlow }) {
   const [nodes, setNodes] = useState<ProgramNode[]>([])
-  const [edges, setEdges] = useState<Edge[]>([])
+  // Aristas del motor (con `resolved`/`dynamic`): el color se aplica aparte,
+  // en un memo con los tokens del tema, para no re-hacer el layout al cambiar
+  // de tema.
+  const [rawEdges, setRawEdges] = useState<ChainEdge[]>([])
+  const updateNodeInternals = useUpdateNodeInternals()
+
+  // Tokens del tema: el trazo y las etiquetas de React Flow van como estilo
+  // inline, así que no heredan las variables CSS por cascada. Sin esto, la
+  // cadena se veía con colores de tema oscuro sobre el papel claro.
+  const tk = useThemeTokens(v => ({
+    resolved: v('--ok') || '#6fcf97',
+    missing: v('--missing') || '#f0708a',
+    dynamic: v('--violet') || '#8b7bf0',
+    labelText: v('--text') || '#e6ebf2',
+    labelBg: v('--bg-panel') || '#12161d',
+    border: v('--border') || '#262e3a',
+  }))
 
   useEffect(() => {
     let cancelled = false
@@ -54,33 +98,49 @@ export function ChainCanvas({ linked }: { linked: LinkedFlow }) {
           data: { chain: n },
         })),
       )
-      setEdges(
-        graph.edges.map(e => {
-          const color = e.dynamic ? '#bb9af7' : e.resolved ? '#9ece6a' : '#f7768e'
-          return {
-            id: e.id,
-            source: e.source,
-            target: e.target,
-            label: e.label,
-            type: 'smoothstep',
-            style: {
-              stroke: color,
-              strokeWidth: 1.8,
-              ...(e.dynamic ? { strokeDasharray: '3 3' } : {}),
-            },
-            labelStyle: { fill: '#c0caf5', fontSize: 11 },
-            labelBgStyle: { fill: '#1f2335', fillOpacity: 0.9 },
-            labelBgPadding: [6, 3] as [number, number],
-            labelBgBorderRadius: 4,
-            markerEnd: { type: MarkerType.ArrowClosed, color },
-          }
-        }),
-      )
+      setRawEdges(graph.edges)
     })
     return () => {
       cancelled = true
     }
   }, [linked])
+
+  // Fuerza a React Flow a medir los handles tras cada layout. Sin esto, al
+  // remontar el lienzo (cambiar de vista y volver) las aristas no se
+  // redibujaban aunque los nodos sí — mismo patrón que FlowCanvas.
+  useEffect(() => {
+    if (nodes.length === 0) return
+    const id = requestAnimationFrame(() => updateNodeInternals(nodes.map(n => n.id)))
+    return () => cancelAnimationFrame(id)
+  }, [nodes, updateNodeInternals])
+
+  // Aristas de React Flow con el color del tema activo. Verde = CALL a un
+  // programa aportado; rosa = literal cuyo fuente falta; violeta punteado =
+  // CALL dinámica (destino solo conocido en ejecución).
+  const edges: Edge[] = useMemo(
+    () =>
+      rawEdges.map(e => {
+        const color = e.dynamic ? tk.dynamic : e.resolved ? tk.resolved : tk.missing
+        return {
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          label: e.label,
+          type: 'smoothstep',
+          style: {
+            stroke: color,
+            strokeWidth: 1.8,
+            ...(e.dynamic ? { strokeDasharray: '3 3' } : {}),
+          },
+          labelStyle: { fill: tk.labelText, fontSize: 11 },
+          labelBgStyle: { fill: tk.labelBg, fillOpacity: 0.92, stroke: tk.border },
+          labelBgPadding: [6, 3] as [number, number],
+          labelBgBorderRadius: 4,
+          markerEnd: { type: MarkerType.ArrowClosed, color },
+        }
+      }),
+    [rawEdges, tk],
+  )
 
   return (
     <ReactFlow
@@ -92,8 +152,25 @@ export function ChainCanvas({ linked }: { linked: LinkedFlow }) {
       nodesConnectable={false}
       edgesFocusable={false}
     >
-      <Background gap={24} size={1.5} color="#2a2f45" />
+      <Panel position="top-left">
+        <ChainLegend colors={{ resolved: tk.resolved, missing: tk.missing, dynamic: tk.dynamic }} />
+      </Panel>
+      <Background gap={24} size={1.5} color={tk.border} />
       <Controls showInteractive={false} />
     </ReactFlow>
+  )
+}
+
+/**
+ * Grafo de llamadas ENTRE programas (izquierda→derecha). Envuelto en
+ * ReactFlowProvider para poder pedir `useUpdateNodeInternals` (el workaround
+ * de medición de handles que hace que las aristas se dibujen y sobrevivan a
+ * un remontaje), igual que FlowCanvas.
+ */
+export function ChainCanvas({ linked }: { linked: LinkedFlow }) {
+  return (
+    <ReactFlowProvider>
+      <ChainCanvasInner linked={linked} />
+    </ReactFlowProvider>
   )
 }

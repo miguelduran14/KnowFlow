@@ -1,5 +1,6 @@
 import type { ParseResult, SchemaField } from 'knowflow'
-import { useState } from 'react'
+import { PushPin, X } from '@phosphor-icons/react'
+import { useCallback, useEffect, useState } from 'react'
 
 /**
  * Mapa de bytes: el esquema como memoria. Combina las direcciones A+B
@@ -140,23 +141,38 @@ function Segment({
   field,
   total,
   onActive,
+  onPin,
+  pinned,
 }: {
   field: SchemaField
   total: number
   onActive: (f: SchemaField) => void
+  onPin: (f: SchemaField) => void
+  pinned: boolean
 }) {
   const meta = TYPE_META[field.type]
   const len = Math.max(field.lengthInBytes, 0)
   const gap = field.type === 'unresolved-copy'
+  const cls = ['bm-seg', gap ? 'bm-seg--gap' : '', field.offsetUnknown ? 'bm-seg--unknown' : '', pinned ? 'bm-seg--pinned' : '']
+    .filter(Boolean)
+    .join(' ')
   return (
     <div
-      className={`bm-seg${gap ? ' bm-seg--gap' : ''}${field.offsetUnknown ? ' bm-seg--unknown' : ''}`}
+      className={cls}
       style={{ left: `${(field.offset / total) * 100}%`, width: `${(Math.max(len, 1) / total) * 100}%`, ...segStyle(meta.hue) }}
       tabIndex={0}
       role="button"
+      aria-pressed={pinned}
       aria-label={`${field.name}, ${field.picture ?? 'grupo'}, ${len} bytes`}
       onMouseEnter={() => onActive(field)}
       onFocus={() => onActive(field)}
+      onClick={() => onPin(field)}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onPin(field)
+        }
+      }}
     >
       <span className="bm-seg__tag">{meta.tag}</span>
       <span className="bm-seg__name">{field.name}</span>
@@ -168,8 +184,17 @@ function Segment({
   )
 }
 
-function RecordMap({ record }: { record: SchemaField }) {
-  const [active, setActive] = useState<SchemaField | undefined>()
+function RecordMap({
+  record,
+  onHover,
+  onPin,
+  pinnedField,
+}: {
+  record: SchemaField
+  onHover: (f: SchemaField) => void
+  onPin: (f: SchemaField) => void
+  pinnedField: SchemaField | undefined
+}) {
   const total = record.lengthInBytes
 
   // Registro elemental (77) o sin longitud fiable: una sola barra.
@@ -178,9 +203,14 @@ function RecordMap({ record }: { record: SchemaField }) {
       <div className="bm-record">
         <RecordHead record={record} />
         <div className="bm-track" style={{ position: 'relative' }}>
-          <Segment field={record} total={Math.max(total, record.lengthInBytes, 1)} onActive={setActive} />
+          <Segment
+            field={record}
+            total={Math.max(total, record.lengthInBytes, 1)}
+            onActive={onHover}
+            onPin={onPin}
+            pinned={pinnedField === record}
+          />
         </div>
-        <Detail active={active} />
       </div>
     )
   }
@@ -219,7 +249,14 @@ function RecordMap({ record }: { record: SchemaField }) {
             />
           ))}
           {mainFields.map((f, i) => (
-            <Segment key={`${f.name}-${i}`} field={f} total={total} onActive={setActive} />
+            <Segment
+              key={`${f.name}-${i}`}
+              field={f}
+              total={total}
+              onActive={onHover}
+              onPin={onPin}
+              pinned={pinnedField === f}
+            />
           ))}
         </div>
 
@@ -235,7 +272,7 @@ function RecordMap({ record }: { record: SchemaField }) {
               return (
                 <div
                   key={`${c.name}-${j}`}
-                  className="bm-subseg"
+                  className={`bm-subseg${pinnedField === c ? ' bm-subseg--pinned' : ''}`}
                   style={{
                     left: `${(c.offset / total) * 100}%`,
                     width: `${(Math.max(c.lengthInBytes, 1) / total) * 100}%`,
@@ -243,9 +280,17 @@ function RecordMap({ record }: { record: SchemaField }) {
                   }}
                   tabIndex={0}
                   role="button"
+                  aria-pressed={pinnedField === c}
                   aria-label={`${c.name}, ${c.picture ?? 'grupo'}, ${c.lengthInBytes} bytes`}
-                  onMouseEnter={() => setActive(c)}
-                  onFocus={() => setActive(c)}
+                  onMouseEnter={() => onHover(c)}
+                  onFocus={() => onHover(c)}
+                  onClick={() => onPin(c)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onPin(c)
+                    }
+                  }}
                 >
                   <b>{c.name}</b>
                   <span>
@@ -257,7 +302,6 @@ function RecordMap({ record }: { record: SchemaField }) {
           </div>
         ))}
       </div>
-      <Detail active={active} />
     </div>
   )
 }
@@ -274,15 +318,74 @@ function RecordHead({ record }: { record: SchemaField }) {
   )
 }
 
-function Detail({ active }: { active: SchemaField | undefined }) {
+/**
+ * Ficha única del campo, anclada como pie pegajoso (sticky) al fondo del
+ * scroll: así no se pierde de vista aunque el registro sea muy alto. Muestra
+ * el campo fijado (clic) o, si no hay ninguno, el que se está sobrevolando.
+ */
+function Detail({
+  field,
+  pinned,
+  onUnpin,
+}: {
+  field: SchemaField | undefined
+  pinned: boolean
+  onUnpin: () => void
+}) {
   return (
-    <div className={`bm-detail${active ? '' : ' bm-detail--empty'}`} aria-live="polite">
-      {active ? detailFor(active) : 'Pasa el ratón (o tabula) por un campo para ver su ficha.'}
+    <div
+      className={`bm-detail${field ? '' : ' bm-detail--empty'}${pinned ? ' bm-detail--pinned' : ''}`}
+      aria-live="polite"
+    >
+      {field ? (
+        <>
+          {pinned && (
+            <span className="bm-detail__pin" title="Campo fijado">
+              <PushPin size={12} weight="fill" /> fijado
+            </span>
+          )}
+          {detailFor(field)}
+          {pinned && (
+            <button
+              type="button"
+              className="bm-detail__unpin"
+              onClick={onUnpin}
+              title="Soltar (Esc)"
+              aria-label="Soltar el campo fijado"
+            >
+              <X size={13} weight="bold" />
+            </button>
+          )}
+        </>
+      ) : (
+        'Pasa el ratón (o tabula) por un campo para ver su ficha · clic para fijarla.'
+      )}
     </div>
   )
 }
 
 export function ByteMap({ data }: { data: ParseResult }) {
+  // Campo sobrevolado (previsualización) y campo fijado al clic. La ficha
+  // muestra el fijado si lo hay; si no, el sobrevolado — así el hover NO pisa
+  // un campo que has clavado para leerlo con calma.
+  const [hovered, setHovered] = useState<SchemaField | undefined>()
+  const [pinned, setPinned] = useState<SchemaField | undefined>()
+  const shown = pinned ?? hovered
+
+  const onHover = useCallback((f: SchemaField) => setHovered(f), [])
+  // Clic en el campo ya fijado lo suelta (toggle); en otro, re-fija.
+  const onPin = useCallback((f: SchemaField) => setPinned(prev => (prev === f ? undefined : f)), [])
+
+  // Esc suelta el campo fijado — gesto estándar de "cerrar/soltar".
+  useEffect(() => {
+    if (!pinned) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPinned(undefined)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [pinned])
+
   if (data.records.length === 0) {
     return (
       <div className="empty">
@@ -330,8 +433,16 @@ export function ByteMap({ data }: { data: ParseResult }) {
         </span>
       </div>
       {data.records.map((record, i) => (
-        <RecordMap key={`${record.name}-${i}`} record={record} />
+        <RecordMap
+          key={`${record.name}-${i}`}
+          record={record}
+          onHover={onHover}
+          onPin={onPin}
+          pinnedField={pinned}
+        />
       ))}
+
+      <Detail field={shown} pinned={pinned !== undefined} onUnpin={() => setPinned(undefined)} />
     </div>
   )
 }

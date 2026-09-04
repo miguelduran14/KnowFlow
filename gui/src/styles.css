@@ -203,6 +203,123 @@ body,
   gap: 8px;
 }
 
+/* ── Insignia de privacidad (local-first / BYOK) ──────────────────────── */
+.privacy {
+  position: relative;
+}
+.privacy__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text-dim);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.privacy__chip:hover,
+.privacy__chip--on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+/* Popover anclado a la derecha del chip para no rebosar por el borde de la
+   ventana (el chip vive en la zona derecha de la topbar). */
+.privacy__pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 100;
+  width: min(340px, 82vw);
+  padding: 14px 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--raise);
+  animation: privacy-in 0.16s ease-out;
+}
+/* Solo se anima el desplazamiento, NO la opacidad: con un ancestro con
+   backdrop-filter (la topbar), animar opacity dejaba el popover pegado a
+   opacity:0 —translúcido— si la animación no completaba. Manteniéndolo
+   siempre opaco, el fondo tapa el contenido de detrás. */
+@keyframes privacy-in {
+  from {
+    transform: translateY(-5px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .privacy__pop {
+    animation: none;
+  }
+}
+.privacy__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.privacy__head > span {
+  margin-right: auto;
+}
+.privacy__close {
+  display: inline-flex;
+  padding: 3px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: 5px;
+}
+.privacy__close:hover {
+  color: var(--missing);
+}
+.privacy__points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.privacy__points li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.privacy__points li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.privacy__points b {
+  color: var(--text);
+  font-weight: 600;
+}
+.privacy__note {
+  margin: 11px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
 /* ── Banda de identidad del programa (la "ficha" de D) ──────────────── */
 .identband {
   display: flex;
@@ -705,13 +822,28 @@ body,
 }
 
 .prog--dynamic {
-  border-color: #bb9af7;
+  border-color: var(--violet);
   border-style: dotted;
 }
 
 .prog--dynamic .prog__name,
 .prog--dynamic .prog__note {
-  color: #bb9af7;
+  color: var(--violet);
+}
+
+/* Leyenda del código de color de la cadena (reusa .leg-row/.leg-line). */
+.chain-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 11px;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--raise);
 }
 
 /* ── Tabla de esquema ──────────────────────────────────── */
@@ -739,6 +871,17 @@ body,
   color: var(--warn);
 }
 
+/* Refuerzo no-cromático: un glifo delante para que "verificado" vs "parcial"
+   no dependa solo del color (daltonismo). El texto de la banda ya lo dice;
+   esto lo hace legible de un vistazo sin distinguir verde de ámbar. */
+.schema__fidelity--verified::before {
+  content: "✓ ";
+  font-weight: 700;
+}
+.schema__fidelity--partial::before {
+  content: "⚠ ";
+}
+
 .schema__missing {
   margin-bottom: 12px;
   padding: 8px 12px;
@@ -760,8 +903,15 @@ body,
   color: var(--text-dim);
   font-weight: 600;
   padding: 6px 10px;
-  border-bottom: 1px solid var(--border);
   font-family: var(--sans);
+  /* Cabecera fija: en un esquema largo, saber qué columna es cuál sin volver
+     arriba. El divisor va como box-shadow (con border-collapse, un
+     border-bottom en un th sticky desaparece al scrollear). */
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  box-shadow: inset 0 -1px 0 var(--border);
+  z-index: 1;
 }
 
 .schema td {
@@ -995,7 +1145,7 @@ body,
   gap: 1px;
   padding: 4px 8px;
   overflow: hidden;
-  cursor: default;
+  cursor: pointer;
 }
 .bm-seg__tag {
   position: absolute;
@@ -1038,6 +1188,13 @@ body,
   filter: brightness(1.05);
   box-shadow: inset 0 0 0 1px var(--sc);
   z-index: 2;
+}
+/* Campo fijado al clic: anillo de acento persistente para distinguirlo del
+   resalte de hover (que usa el color del tipo). */
+.bm-seg--pinned,
+.bm-subseg--pinned {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  z-index: 3;
 }
 
 .bm-subtrack {
@@ -1088,7 +1245,7 @@ body,
   border-left-width: 3px;
   background: var(--sf, var(--bg-raised));
   border-radius: 4px;
-  cursor: default;
+  cursor: pointer;
 }
 .bm-subseg b {
   font-family: var(--mono);
@@ -1118,17 +1275,53 @@ body,
   z-index: 2;
 }
 
+/* Ficha del campo como PIE PEGAJOSO: se ancla al fondo del scroll del panel
+   de Datos (.datapanel) para que no se pierda de vista aunque el registro
+   sea muy alto — antes vivía al final de cada registro y quedaba fuera de
+   pantalla al haber muchos campos. */
 .bm-detail {
-  margin-top: 18px;
-  padding: 9px 12px;
-  border-top: 1px solid var(--border);
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin-top: 14px;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-panel);
+  box-shadow: 0 -6px 16px color-mix(in srgb, var(--bg) 55%, transparent), var(--edge);
   font-family: var(--mono);
   font-size: 12px;
-  min-height: 36px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
+}
+.bm-detail--pinned {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+.bm-detail__pin {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--sans);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+}
+.bm-detail__unpin {
+  margin-left: auto;
+  display: inline-flex;
+  padding: 3px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: 5px;
+}
+.bm-detail__unpin:hover {
+  color: var(--missing);
 }
 .bm-detail .k {
   color: var(--text-dim);
@@ -1389,11 +1582,38 @@ body,
 
 
 .explain__error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 10px 14px;
   border: 1px solid var(--missing);
   border-radius: 6px;
   color: var(--missing);
   font-size: 13px;
+}
+.explain__error-msg {
+  flex: 1;
+  min-width: 0;
+}
+.explain__retry {
+  flex: none;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid var(--missing);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--missing);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.explain__retry:hover:not(:disabled) {
+  background: var(--missing);
+  color: var(--bg);
+}
+.explain__retry:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .explain__result {
@@ -2255,8 +2475,12 @@ body,
   color: var(--text-dim);
   font-weight: 600;
   padding: 6px 10px;
-  border-bottom: 1px solid var(--border);
   font-size: 11px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  box-shadow: inset 0 -1px 0 var(--border);
+  z-index: 1;
 }
 
 .inv-execs td {
@@ -2523,6 +2747,44 @@ body,
 .wt__para-line {
   color: var(--text-dim);
   font-size: 10px;
+}
+/* Chip de salto al código (distinto del de salto a párrafo/Flujo). */
+.wt__para-chip--code {
+  color: var(--text-dim);
+}
+.wt__para-chip--code:hover {
+  color: var(--accent);
+}
+.wt__para-chip--static {
+  cursor: default;
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+
+/* Grupo de chips de salto de un aviso (párrafo → Flujo, línea → código). */
+.adv-card__jumps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+/* Nº de línea clicable inline (inventario): enlace discreto al código. */
+.code-line {
+  font-family: var(--mono);
+  font-size: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-dim);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 2px;
+}
+.code-line:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
 }
 
 /* Rama condicional: etapa marcada con acento violeta, tag "rama" */

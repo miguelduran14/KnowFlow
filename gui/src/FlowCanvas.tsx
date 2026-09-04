@@ -47,38 +47,7 @@ import {
   type CanvasNode,
 } from './layout.js'
 import { downloadPng, downloadSvg, graphToSvg, type DiagramPalette } from './diagramExport.js'
-
-/**
- * React Flow recibe el color del TRAZO de la arista como string inline (no
- * CSS), así que no hereda las variables del tema por cascada. Este hook
- * resuelve los tokens que el trazo necesita y se re-ejecuta cuando cambia
- * el tema. La etiqueta de la arista ya NO pasa por aquí: es HTML propio
- * (ver CobolEdgeView) y sus colores viven en CSS puro (.edge-label*).
- */
-function useThemeTokens() {
-  const read = () => {
-    const cs = getComputedStyle(document.documentElement)
-    const v = (name: string) => cs.getPropertyValue(name).trim()
-    return {
-      dots: v('--border'),
-      missing: v('--missing'),
-      guard: v('--violet'),
-    }
-  }
-  const [tokens, setTokens] = useState(read)
-  useEffect(() => {
-    const refresh = () => setTokens(read())
-    const obs = new MutationObserver(refresh)
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
-    const mq = window.matchMedia('(prefers-color-scheme: light)')
-    mq.addEventListener('change', refresh)
-    return () => {
-      obs.disconnect()
-      mq.removeEventListener('change', refresh)
-    }
-  }, [])
-  return tokens
-}
+import { useThemeTokens } from './theme.js'
 
 type CobolNodeData = { canvas: CanvasNode; focused?: boolean; dimmed?: boolean }
 type CobolNode = Node<CobolNodeData, 'cobol'>
@@ -711,7 +680,13 @@ function FlowCanvasInner({ flow, inventory, focusParagraph, onFocused, onOpenCod
   // Último grafo posicionado (nodos + aristas con geometría de elk): la fuente
   // del export SVG/PNG, que no pasa por React Flow.
   const graphRef = useRef<CanvasGraph | undefined>(undefined)
-  const tk = useThemeTokens()
+  // Tokens del tema para el TRAZO de las aristas (React Flow los recibe como
+  // string inline, no CSS). Las etiquetas van por CSS puro (.edge-label*).
+  const tk = useThemeTokens(v => ({
+    dots: v('--border'),
+    missing: v('--missing'),
+    guard: v('--violet'),
+  }))
   // Hooks del contexto de React Flow (el componente va envuelto en
   // <ReactFlowProvider>): `rf` para paneo/encuadre, y updateNodeInternals
   // para forzar la medición de los bounds de los handles — sin ella, en

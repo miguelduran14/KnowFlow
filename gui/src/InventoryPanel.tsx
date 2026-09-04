@@ -1,12 +1,28 @@
 import { factsFidelity, type Inventory } from 'knowflow'
 
+/** Nº de línea clicable que salta al código. Si no hay callback, texto plano. */
+function LineLink({ line, onOpenCode }: { line: number; onOpenCode?: ((line: number) => void) | undefined }) {
+  if (!onOpenCode) return <>L{line}</>
+  return (
+    <button type="button" className="code-line" onClick={() => onOpenCode(line)} title="Ver esta línea en el código">
+      L{line}
+    </button>
+  )
+}
+
 /**
  * "¿Este programa qué toca?" — ficheros con su DD y sus operaciones,
  * tablas DB2, cursores y comandos CICS. Todo es extracción literal del
  * fuente: no se interpreta qué hace una consulta, solo se dice que está
  * ahí y en qué línea.
  */
-export function InventoryPanel({ inventory }: { inventory: Inventory }) {
+export function InventoryPanel({
+  inventory,
+  onOpenCode,
+}: {
+  inventory: Inventory
+  onOpenCode?: ((line: number) => void) | undefined
+}) {
   const empty =
     inventory.files.length === 0 &&
     inventory.execs.length === 0 &&
@@ -68,7 +84,8 @@ export function InventoryPanel({ inventory }: { inventory: Inventory }) {
                     </span>
                     <span className="inv-op__where">
                       {op.paragraph}
-                      {op.paragraphImplicit ? ' (entrada implícita)' : ''} · L{op.line}
+                      {op.paragraphImplicit ? ' (entrada implícita)' : ''} ·{' '}
+                      <LineLink line={op.line} onOpenCode={onOpenCode} />
                     </span>
                   </div>
                 ))
@@ -151,7 +168,9 @@ export function InventoryPanel({ inventory }: { inventory: Inventory }) {
             <tbody>
               {inventory.execs.map((exec, i) => (
                 <tr key={i}>
-                  <td className="cell-num">{exec.line}</td>
+                  <td className="cell-num">
+                    <LineLink line={exec.line} onOpenCode={onOpenCode} />
+                  </td>
                   <td>
                     {exec.paragraph ?? 'DATA DIVISION'}
                     {exec.paragraphImplicit && <span className="pill pill--warn">entrada implícita</span>}

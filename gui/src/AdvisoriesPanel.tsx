@@ -1,4 +1,5 @@
 import type { Advisory } from 'knowflow'
+import { Code } from '@phosphor-icons/react'
 
 /**
  * "Cuidado con esto" — trampas de mantenimiento COBOL ya verificadas por
@@ -11,9 +12,11 @@ import type { Advisory } from 'knowflow'
 export function AdvisoriesPanel({
   advisories,
   onJumpToParagraph,
+  onOpenCode,
 }: {
   advisories: Advisory[]
   onJumpToParagraph?: ((paragraph: string) => void) | undefined
+  onOpenCode?: ((line: number) => void) | undefined
 }) {
   if (advisories.length === 0) {
     return (
@@ -39,18 +42,31 @@ export function AdvisoriesPanel({
           <li key={i} className="adv-card">
             <div className="adv-card__head">
               <span className="adv-card__title">{advisory.title}</span>
-              {advisory.line > 0 && (
-                <button
-                  type="button"
-                  className="wt__para-chip"
-                  disabled={!advisory.paragraph}
-                  onClick={() => advisory.paragraph && onJumpToParagraph?.(advisory.paragraph)}
-                  title={advisory.paragraph ? 'Ver este párrafo en el diagrama de Flujo' : undefined}
-                >
-                  {advisory.paragraph ?? 'L' + advisory.line}
-                  {advisory.paragraph && <span className="wt__para-line">L{advisory.line}</span>}
-                </button>
-              )}
+              <div className="adv-card__jumps">
+                {advisory.paragraph && (
+                  <button
+                    type="button"
+                    className="wt__para-chip"
+                    onClick={() => onJumpToParagraph?.(advisory.paragraph!)}
+                    title="Ver este párrafo en el diagrama de Flujo"
+                  >
+                    {advisory.paragraph}
+                  </button>
+                )}
+                {advisory.line > 0 && onOpenCode && (
+                  <button
+                    type="button"
+                    className="wt__para-chip wt__para-chip--code"
+                    onClick={() => onOpenCode(advisory.line)}
+                    title="Ver esta línea en el código"
+                  >
+                    <Code size={12} weight="bold" /> L{advisory.line}
+                  </button>
+                )}
+                {advisory.line > 0 && !onOpenCode && !advisory.paragraph && (
+                  <span className="wt__para-chip wt__para-chip--static">L{advisory.line}</span>
+                )}
+              </div>
             </div>
             <p className="adv-card__msg">{advisory.message}</p>
           </li>

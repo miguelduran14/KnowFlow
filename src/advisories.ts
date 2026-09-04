@@ -27,11 +27,14 @@ export function checkAdvisories(
     out.push(...stopRunInSubprogram(source, data, flow))
     out.push(...gotoCrossesSection(flow))
     out.push(...alterStatements(source, flow))
+    out.push(...unreachableParagraphs(source, flow))
   }
   if (inventory) {
     out.push(...sqlWriteWithoutWhere(inventory))
     out.push(...fileOpenedNotClosed(inventory))
     out.push(...cursorAdvisories(inventory))
+    out.push(...unusedCursors(inventory))
+    out.push(...unusedFiles(inventory))
   }
 
   return out.sort((a, b) => a.line - b.line)
@@ -249,6 +252,129 @@ function cursorAdvisories(inventory: Inventory): Advisory[] {
         message: `El cursor ${cursor.name} tiene FETCH pero no OPEN en el fuente aportado — si el OPEN no está en un copybook ausente, el FETCH fallaría en ejecución.`,
         line: fetch?.line ?? 0,
         paragraph: fetch?.paragraphImplicit ? undefined : fetch?.paragraph,
+      })
+    }
+  }
+  return out
+}
+
+// COBOL es case-insensitive: los nombres de párrafo se comparan en mayúsculas.
+const upper = (name: string): string => name.toUpperCase()
+
+/** ¿La PROCEDURE DIVISION contiene un COPY? Un COPY puede inyectar PERFORMs
+ *  que el parser de flujo no ve (no expande copybooks), así que la
+ *  alcanzabilidad deja de ser fiable. */
+function procedureHasCopy(source: string): boolean {
+  let inProcedure = false
+  for (const { masked } of cleanLines(source)) {
+    if (/^\s*PROCEDURE\s+DIVISION/i.test(masked)) {
+      inProcedure = true
+      continue
+    }
+    if (inProcedure && /(?<![\w-])COPY\s+[A-Za-z0-9]/i.test(masked)) return true
+  }
+  return false
+}
+
+/** ¿Hay algún ALTER? ALTER cambia el destino de un GO TO en ejecución, así
+ *  que un párrafo podría alcanzarse por una vía que el grafo no modela. */
+function sourceHasAlter(source: string): boolean {
+  return cleanLines(source).some(l => /(?<![\w-])ALTER\s+[A-Za-z0-9]/i.test(l.masked))
+}
+
+/**
+ * Párrafos que ningún camino de ejecución alcanza: código muerto. Se hace un
+ * recorrido desde las entradas (el primer párrafo, el nodo de entrada
+ * implícito y los párrafos de DECLARATIVES, que invoca el runtime) siguiendo
+ * PERFORM/GO TO/caída natural/SORT — las CALL no cuentan (van a otro
+ * programa). Un párrafo declarado que no se alcanza parece eliminable.
+ *
+ * Honestidad (ADR-0003): si el flujo puede estar incompleto —un COPY en la
+ * PROCEDURE que inyecte PERFORMs no vistos, o un ALTER que redirija un GO TO—
+ * NO se acusa a nadie: prefiere no avisar a un falso positivo.
+ */
+function unreachableParagraphs(source: string, flow: FlowResult): Advisory[] {
+  if (procedureHasCopy(source) || sourceHasAlter(source)) return []
+  if (flow.paragraphs.length === 0) return []
+
+  // Adyacencia por nombre (mayúsculas): destino de cada arista a un párrafo.
+  const adj = new Map<string, string[]>()
+  for (const edge of flow.edges) {
+    if (edge.kind === 'call') continue
+    const from = upper(edge.from)
+    if (!adj.has(from)) adj.set(from, [])
+    adj.get(from)!.push(upper(edge.to))
+  }
+
+  // Entradas del programa.
+  const entries = new Set<string>()
+  entries.add(upper(flow.paragraphs[0]!.name))
+  for (const p of flow.paragraphs) {
+    if (p.implicit || p.inDeclaratives) entries.add(upper(p.name))
+  }
+
+  const reachable = new Set<string>(entries)
+  const stack = [...entries]
+  while (stack.length > 0) {
+    const cur = stack.pop()!
+    for (const next of adj.get(cur) ?? []) {
+      if (!reachable.has(next)) {
+        reachable.add(next)
+        stack.push(next)
+      }
+    }
+  }
+
+  const out: Advisory[] = []
+  for (const para of flow.paragraphs) {
+    if (para.implicit || para.inDeclaratives || para.line === undefined) continue
+    if (reachable.has(upper(para.name))) continue
+    out.push({
+      rule: 'unreachable-paragraph',
+      title: `${para.name} inalcanzable`,
+      message: `Ningún PERFORM, GO TO ni caída natural llega a ${para.name} en el fuente aportado: parece código muerto. Confirma que no lo referencia un copybook no aportado antes de eliminarlo.`,
+      line: para.line,
+      paragraph: para.name,
+    })
+  }
+  return out
+}
+
+/**
+ * Cursor DB2 declarado y sin usar: un DECLARE sin OPEN/FETCH/CLOSE en el
+ * fuente aportado. O sobra, o su uso vive en un copybook ausente.
+ */
+function unusedCursors(inventory: Inventory): Advisory[] {
+  const out: Advisory[] = []
+  for (const cursor of inventory.cursors) {
+    if (cursor.declared && !cursor.opened && !cursor.fetched && !cursor.closed) {
+      const declare = inventory.execs.find(e => e.cursor === cursor.name && e.verb === 'DECLARE')
+      out.push({
+        rule: 'unused-cursor',
+        title: `Cursor ${cursor.name} sin usar`,
+        message: `El cursor ${cursor.name} se declara (DECLARE) pero no se abre, lee ni cierra en el fuente aportado: parece declarado y sin uso.`,
+        line: declare?.line ?? 0,
+        ...(declare && !declare.paragraphImplicit && declare.paragraph ? { paragraph: declare.paragraph } : {}),
+      })
+    }
+  }
+  return out
+}
+
+/**
+ * Fichero declarado en FILE-CONTROL (SELECT) y sin ninguna operación de E/S
+ * en el fuente aportado: o sobra el SELECT, o el uso está en un copybook
+ * ausente. No lleva línea propia (el SELECT no se ancla a una).
+ */
+function unusedFiles(inventory: Inventory): Advisory[] {
+  const out: Advisory[] = []
+  for (const file of inventory.files) {
+    if (file.operations.length === 0) {
+      out.push({
+        rule: 'unused-file',
+        title: `${file.name} declarado y sin usar`,
+        message: `El fichero ${file.name} se declara en FILE-CONTROL (SELECT) pero no aparece ninguna operación (OPEN/READ/WRITE…) sobre él en el fuente aportado.`,
+        line: 0,
       })
     }
   }

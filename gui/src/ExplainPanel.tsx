@@ -530,7 +530,14 @@ export function ExplainPanel({
         </div>
       </section>
 
-      {error && <div className="explain__error">{error}</div>}
+      {error && (
+        <div className="explain__error" role="alert">
+          <span className="explain__error-msg">{error}</span>
+          <button className="explain__retry" onClick={explain} disabled={busy || !ready}>
+            {busy ? 'Reintentando…' : 'Reintentar'}
+          </button>
+        </div>
+      )}
 
       {/* Mientras llega la respuesta: si ya hay texto en streaming se muestra
           en vivo (con cursor), y si no, el esqueleto para que la espera no
