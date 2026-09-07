@@ -6,6 +6,10 @@ const here = (p: string) => fileURLToPath(new URL(p, import.meta.url))
 
 export default defineConfig({
   plugins: [react()],
+  // `src/exampleProgram.ts` importa los .cbl/.cpy de `examples/` (un nivel
+  // por encima de `gui/`) con `?raw`. El servidor de desarrollo restringe
+  // la lectura al workspace; hay que permitir el padre.
+  server: { fs: { allow: ['..'] } },
   // El motor (`knowflow`) se enlaza con `file:..`, así que sus imports se
   // resuelven desde el directorio padre. Sin forzar una única instancia,
   // Vite carga dos copias de React (la de la GUI y la que arrastra

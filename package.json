@@ -1,6 +1,6 @@
 {
   "name": "knowflow",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "COBOL comprehension and onboarding tool — parse deterministically, explain with AI",
   "license": "Apache-2.0",
   "type": "module",

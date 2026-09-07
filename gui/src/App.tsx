@@ -34,6 +34,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
 import { AdvisoriesPanel } from './AdvisoriesPanel.js'
 import { DataPanel } from './DataPanel.js'
+import { EXAMPLE } from './exampleProgram.js'
 import { ExplainPanel } from './ExplainPanel.js'
 import { GlossaryProvider } from './glossary.js'
 import { InventoryPanel } from './InventoryPanel.js'
@@ -44,78 +45,6 @@ import { PrivacyBadge } from './PrivacyBadge.js'
 // se ve un grafo. El resto de la app funciona sin ellos.
 const FlowCanvas = lazy(() => import('./FlowCanvas.js').then(m => ({ default: m.FlowCanvas })))
 const ChainCanvas = lazy(() => import('./ChainCanvas.js').then(m => ({ default: m.ChainCanvas })))
-
-const SAMPLE = `      * Programa sintético de ejemplo (no es código real de nadie).
-       IDENTIFICATION DIVISION.
-       PROGRAM-ID. DEMOFLOW.
-       ENVIRONMENT DIVISION.
-       INPUT-OUTPUT SECTION.
-       FILE-CONTROL.
-           SELECT MOV-FILE ASSIGN TO MOVDD
-               ORGANIZATION IS SEQUENTIAL.
-           SELECT RPT-FILE ASSIGN TO RPTDD.
-       DATA DIVISION.
-       FILE SECTION.
-       FD  MOV-FILE.
-       01  MOV-REC            PIC X(120).
-       FD  RPT-FILE.
-       01  RPT-REC            PIC X(133).
-       WORKING-STORAGE SECTION.
-           EXEC SQL INCLUDE SQLCA END-EXEC.
-           EXEC SQL
-               DECLARE CLI-CUR CURSOR FOR
-                   SELECT CLI_ID, CLI_SALDO
-                     FROM CLIENTES
-                    WHERE CLI_ESTADO = 'A'
-           END-EXEC.
-       01 WS-REGISTRO.
-         05 WS-CLAVE          PIC X(8).
-         05 WS-IMPORTE        PIC S9(7)V99 COMP-3.
-         05 WS-IMPORTE-ED     PIC ZZ,ZZ9.99.
-         05 WS-ESTADO         PIC X(1).
-           88 WS-ACTIVO         VALUE 'A'.
-           88 WS-CERRADO        VALUE 'C'.
-       PROCEDURE DIVISION.
-       MAIN-PARA.
-           OPEN INPUT MOV-FILE OUTPUT RPT-FILE
-           PERFORM INIT-PARA
-           PERFORM PROCESS-PARA UNTIL WS-EOF = 'Y'
-           PERFORM REPORT-PARA
-           CLOSE MOV-FILE RPT-FILE
-           STOP RUN.
-       INIT-PARA.
-           MOVE 0 TO WS-COUNT
-           EXEC SQL OPEN CLI-CUR END-EXEC.
-       PROCESS-PARA.
-           PERFORM READ-NEXT-PARA
-           EVALUATE WS-ESTADO
-               WHEN 'A'
-                   CALL 'VALIDMOD' USING WS-REGISTRO
-               WHEN 'C'
-               WHEN 'X'
-                   PERFORM CIERRE-PARA
-               WHEN OTHER
-                   PERFORM ERROR-PARA
-           END-EVALUATE
-           ADD 1 TO WS-COUNT.
-       READ-NEXT-PARA.
-           READ MOV-FILE
-           EXEC SQL FETCH CLI-CUR INTO :WS-ID, :WS-SALDO END-EXEC.
-       CIERRE-PARA.
-           IF WS-IMPORTE > 0
-               EXEC SQL
-                   UPDATE CLIENTES
-                      SET CLI_SALDO = :WS-SALDO
-                    WHERE CLI_ID = :WS-ID
-               END-EXEC
-           END-IF.
-       ERROR-PARA.
-           DISPLAY 'ESTADO NO ESPERADO'.
-       REPORT-PARA.
-           WRITE RPT-REC
-           CALL WS-REPORT-PROG
-           DISPLAY 'DONE'.
-`
 
 const MAIN_SOURCE = 'programa pegado'
 
@@ -568,6 +497,15 @@ function AppShell() {
     setCodeOpen(false)
   }, [])
 
+  // Carga la cadena de ejemplo de `examples/` (programa + copybooks +
+  // subprogramas) por la misma vía que un drag-drop del usuario.
+  const loadExample = useCallback(() => {
+    setSource(EXAMPLE.source)
+    setCopybooks(new Map(Object.entries(EXAMPLE.copybooks)))
+    setOthers(new Map(Object.entries(EXAMPLE.others)))
+    setExplanation(undefined)
+  }, [])
+
   const hasSource = source.trim() !== ''
   const hasGraph = flow !== undefined && flow.paragraphs.length > 0
   const chainEnabled = !!(linked && linked.calls.length > 0)
@@ -593,7 +531,7 @@ function AppShell() {
           <PrivacyBadge />
           <ThemeToggle />
           {!hasSource ? (
-            <button className="btn" onClick={() => setSource(SAMPLE)}>
+            <button className="btn" onClick={loadExample}>
               Cargar ejemplo
             </button>
           ) : (
@@ -613,7 +551,7 @@ function AppShell() {
       </header>
 
       {!hasSource ? (
-        <Landing over={dragOver} onLoadExample={() => setSource(SAMPLE)} />
+        <Landing over={dragOver} onLoadExample={loadExample} />
       ) : (
         <div className={`workspace${codeOpen ? ' workspace--code-open' : ''}`}>
           <NavRail view={view} onView={setView} chainEnabled={chainEnabled} advisoryCount={advisories.length} />

@@ -61,6 +61,18 @@ export function collectReferences(source: string, data?: ParseResult | undefined
   const known = new Set(nameCounts.keys())
   const ambiguousNames = new Set([...nameCounts].filter(([, n]) => n > 1).map(([k]) => k))
 
+  // Nombres declarados con `INDEXED BY`: son registros especiales de
+  // COBOL, no campos del esquema (sin PIC ni offset), así que no están en
+  // `known`. Se recogen para no acusarlos como nombres desconocidos ni
+  // fabricarles referencias — igual que un `SET IX UP BY 1` no es una
+  // escritura de un dato.
+  const indexNames = new Set<string>()
+  for (const l of cleaned) {
+    for (const m of l.masked.matchAll(/(?<![\w-])INDEXED\s+BY\s+((?:[A-Za-z][\w-]*\s*)+)/gi)) {
+      for (const n of m[1]!.trim().split(/\s+/)) indexNames.add(n.toUpperCase())
+    }
+  }
+
   /** Resuelve un token a un campo del esquema (o a su padre, si es un 88). */
   const resolve = (
     u: string,
@@ -145,7 +157,7 @@ export function collectReferences(source: string, data?: ParseResult | undefined
       const at = base + (m.index ?? 0)
       const o = oneRef(tok, kind, at, opts.uncertain ?? false)
       if (o) out.push(o)
-      else if (opts.collectUnknown !== false && tok.length > 1) unknownNames.add(u)
+      else if (opts.collectUnknown !== false && tok.length > 1 && !indexNames.has(u)) unknownNames.add(u)
     }
     // Identificadores DENTRO de paréntesis → siempre lectura, `subscript`.
     for (const [lo, hi] of parenRanges(text)) {
@@ -898,4 +910,9 @@ const NON_NAME = new Set<string>([
   // SQL / CICS que puedan colarse como token suelto
   'EXEC', 'SQL', 'CICS', 'SELECT', 'INSERT', 'UPDATE', 'FETCH', 'DECLARE', 'CURSOR', 'ORDER', 'GROUP',
   'HAVING', 'WHERE', 'VALUES', 'RESP', 'RESP2', 'INDICATOR', 'CIC',
+  // FUNCTION y funciones intrínsecas (FUNCTION MOD (X 4), FUNCTION MAX (...))
+  'FUNCTION', 'MOD', 'REM', 'MAX', 'MIN', 'SUM', 'MEAN', 'MEDIAN', 'RANGE', 'MIDRANGE', 'ABS', 'SQRT',
+  'NUMVAL', 'NUMVAL-C', 'INTEGER', 'INTEGER-PART', 'INTEGER-OF-DATE', 'DATE-OF-INTEGER', 'RANDOM',
+  'CURRENT-DATE', 'WHEN-COMPILED', 'ORD', 'ORD-MAX', 'ORD-MIN', 'CHAR', 'UPPER-CASE', 'LOWER-CASE',
+  'REVERSE', 'TRIM', 'LENGTH-AN', 'STORED-CHAR-LENGTH', 'FACTORIAL', 'LOG', 'LOG10', 'EXP', 'EXP10',
 ])
