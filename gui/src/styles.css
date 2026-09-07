@@ -1478,6 +1478,123 @@ body,
   color: var(--text-dim);
   opacity: 0.75;
 }
+.bm-uses__none {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+/* Trazabilidad transitiva (P7): de dónde viene / a dónde va el valor del
+   campo fijado. Va debajo del panel de usos, dentro del mismo scroll. */
+.bm-trace {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.bm-trace__legend {
+  font-family: var(--sans);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+.bm-trace__side {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.bm-trace__head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--sans);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.bm-trace__head b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.bm-trace__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bm-trace__row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+}
+.bm-trace__peer {
+  font-family: var(--mono);
+  color: var(--text);
+}
+button.bm-trace__peer {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--accent);
+}
+.bm-trace__via {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.bm-trace__toggle {
+  align-self: flex-start;
+  margin-left: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-family: var(--sans);
+  font-size: 10px;
+  cursor: pointer;
+  border-bottom: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.bm-trace__paths {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bm-trace__path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+.bm-trace__chain {
+  color: var(--text);
+}
+.bm-trace__path--more {
+  font-style: italic;
+}
+.bm-trace__flag {
+  font-family: var(--sans);
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.bm-trace__flag--warn {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+}
 
 @media (prefers-reduced-motion: no-preference) {
   .bm-seg,

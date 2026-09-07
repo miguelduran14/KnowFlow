@@ -1,4 +1,12 @@
-import type { FieldReference, FieldUsage, ParseResult, ReferenceKind, ReferenceResult, SchemaField } from './types.js'
+import type {
+  AssignmentEdge,
+  FieldReference,
+  FieldUsage,
+  ParseResult,
+  ReferenceKind,
+  ReferenceResult,
+  SchemaField,
+} from './types.js'
 import { cleanLines, extractProgramIds, matchHeader, type SourceLine } from './source-lines.js'
 
 /**
@@ -31,7 +39,7 @@ export function collectReferences(source: string, data?: ParseResult | undefined
   // Sin esquema no hay contra qué resolver los nombres: se devuelve vacío
   // (la GUI siempre tiene `data` cuando tiene fuente).
   if (!data || data.records.length === 0) {
-    return { fields: [], unknownNames: [], fragment }
+    return { fields: [], assignments: [], unknownNames: [], fragment }
   }
 
   // ── Índice del esquema: nombres conocidos, mapa 88→padre y homónimos ──
@@ -65,6 +73,7 @@ export function collectReferences(source: string, data?: ParseResult | undefined
 
   const unknownNames = new Set<string>()
   const all: FieldReference[] = []
+  const assignments: AssignmentEdge[] = []
   const dedup = new Set<string>()
 
   // Estado del recorrido, mutado por el bucle principal.
@@ -87,6 +96,12 @@ export function collectReferences(source: string, data?: ParseResult | undefined
     uncertain?: boolean
     via88?: string
     ambiguous?: boolean
+    /** El token venía entre paréntesis: es un subíndice o una longitud de
+     *  modificación de referencia (se LEE), no el operando en sí. */
+    subscript?: boolean
+    /** Operando auxiliar (POINTER, TALLYING IN): no es un canal de valor,
+     *  se excluye de las aristas de propagación. */
+    aux?: boolean
   }
 
   /** Un token resuelto como una ocurrencia, o undefined si no casa. */
@@ -108,6 +123,12 @@ export function collectReferences(source: string, data?: ParseResult | undefined
    * ocurrencias de `kind`. Los que no resuelven y parecen un nombre se
    * apuntan en `unknownNames` (salvo que `collectUnknown` sea false: los
    * verbos no modelados no deben ensuciar esa lista).
+   *
+   * Lo que va entre paréntesis —subíndice (`WS-EL(WS-I)`) o longitud de
+   * modificación de referencia (`WS-X(1:WS-L)`)— NO es el operando en sí:
+   * son índices/longitudes que se LEEN. Se extraen aparte, marcados
+   * `subscript`, para que `MOVE A TO B(I)` cuente como escritura de B y
+   * lectura de I (antes I se contaba como escritura).
    */
   const refsIn = (
     text: string,
@@ -116,7 +137,8 @@ export function collectReferences(source: string, data?: ParseResult | undefined
     opts: { uncertain?: boolean; collectUnknown?: boolean } = {},
   ): Raw[] => {
     const out: Raw[] = []
-    for (const m of text.matchAll(IDENT_RE)) {
+    // Identificadores FUERA de paréntesis → rol `kind`.
+    for (const m of maskParens(text).matchAll(IDENT_RE)) {
       const tok = m[0]
       const u = tok.toUpperCase()
       if (NON_NAME.has(u)) continue
@@ -124,6 +146,18 @@ export function collectReferences(source: string, data?: ParseResult | undefined
       const o = oneRef(tok, kind, at, opts.uncertain ?? false)
       if (o) out.push(o)
       else if (opts.collectUnknown !== false && tok.length > 1) unknownNames.add(u)
+    }
+    // Identificadores DENTRO de paréntesis → siempre lectura, `subscript`.
+    for (const [lo, hi] of parenRanges(text)) {
+      for (const m of text.slice(lo, hi).matchAll(IDENT_RE)) {
+        const tok = m[0]
+        if (NON_NAME.has(tok.toUpperCase())) continue
+        const o = oneRef(tok, 'read', base + lo + (m.index ?? 0), opts.uncertain ?? false)
+        if (o) {
+          o.subscript = true
+          out.push(o)
+        }
+      }
     }
     return out
   }
@@ -210,6 +244,12 @@ export function collectReferences(source: string, data?: ParseResult | undefined
     return refsIn(i >= 0 ? chunk.slice(0, i) : chunk, base, kind)
   }
 
+  /** Marca ocurrencias como auxiliares (POINTER/TALLYING): fuera de aristas. */
+  const markAux = (raws: Raw[]): Raw[] => {
+    for (const r of raws) r.aux = true
+    return raws
+  }
+
   const stringRefs = (chunk: string, base: number): Raw[] => {
     const intoI = kw(chunk, 'INTO')
     if (intoI < 0) return refsIn(chunk, base, 'unclassified', { collectUnknown: false })
@@ -222,7 +262,7 @@ export function collectReferences(source: string, data?: ParseResult | undefined
     out.push(...refsIn(rest.slice(0, wEnd), rb, 'write'))
     if (ptrI >= 0) {
       const pEnd = ovI > ptrI ? ovI : rest.length
-      out.push(...refsIn(rest.slice(ptrI + 7, pEnd), rb + ptrI + 7, 'read-write'))
+      out.push(...markAux(refsIn(rest.slice(ptrI + 7, pEnd), rb + ptrI + 7, 'read-write')))
     }
     return out
   }
@@ -242,10 +282,10 @@ export function collectReferences(source: string, data?: ParseResult | undefined
       const seg = rest.slice(ptrI + 7, endI > ptrI ? endI : rest.length)
       const tI = kw(seg, 'TALLYING')
       if (tI >= 0) {
-        out.push(...refsIn(seg.slice(0, tI), rb + ptrI + 7, 'read-write'))
-        out.push(...refsIn(seg.slice(tI), rb + ptrI + 7 + tI, 'write'))
+        out.push(...markAux(refsIn(seg.slice(0, tI), rb + ptrI + 7, 'read-write')))
+        out.push(...markAux(refsIn(seg.slice(tI), rb + ptrI + 7 + tI, 'write')))
       } else {
-        out.push(...refsIn(seg, rb + ptrI + 7, 'read-write'))
+        out.push(...markAux(refsIn(seg, rb + ptrI + 7, 'read-write')))
       }
     }
     return out
@@ -454,6 +494,35 @@ export function collectReferences(source: string, data?: ParseResult | undefined
     return ln
   }
 
+  /**
+   * Aristas de propagación de valor de una sentencia: cada operando fuente
+   * (lectura, salvo subíndices y auxiliares) fluye a cada operando destino
+   * (escritura, salvo auxiliares). Solo para verbos que COPIAN o DERIVAN un
+   * valor (`EDGE_VERBS`) — no IF/EVALUATE (condición), READ (origen externo,
+   * el fichero) ni PERFORM.
+   */
+  const emitEdges = (verb: string, label: string, occs: Raw[], snippet: string, lineAt: (o: number) => number): void => {
+    if (!EDGE_VERBS.has(verb)) return
+    const sources = occs.filter(o => (o.kind === 'read' || o.kind === 'read-write') && !o.subscript && !o.aux)
+    const sinks = occs.filter(o => (o.kind === 'write' || o.kind === 'read-write') && !o.aux)
+    for (const s of sources) {
+      for (const t of sinks) {
+        if (s.name === t.name) continue
+        assignments.push({
+          from: s.name,
+          to: t.name,
+          verb: label,
+          paragraph: paragraph ?? implicitEntry,
+          line: lineAt(t.offset),
+          snippet,
+          kind: 'statement',
+          ...(paragraph === undefined ? { paragraphImplicit: true } : {}),
+          ...(s.uncertain || t.uncertain ? { uncertain: true } : {}),
+        })
+      }
+    }
+  }
+
   const processSentence = (masked: string, body: string, map: { start: number; line: number }[]): void => {
     const lineAt = makeLineAt(map)
     const marks: { at: number; verb: string }[] = []
@@ -467,6 +536,7 @@ export function collectReferences(source: string, data?: ParseResult | undefined
       const snippet = collapse(body.slice(start, end))
       const label = verb === 'GO' ? 'GO TO' : verb
       for (const o of occs) emitRef(o, label, snippet, lineAt(o.offset))
+      emitEdges(verb, label, occs, snippet, lineAt)
     }
   }
 
@@ -648,7 +718,49 @@ export function collectReferences(source: string, data?: ParseResult | undefined
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
 
-  return { fields, unknownNames: [...unknownNames].sort(), fragment }
+  // Aristas de solape REDEFINES: escribir un alias cambia los bytes del
+  // otro, así que el valor se propaga en ambos sentidos. No es una
+  // asignación (es una reinterpretación de memoria) → `uncertain` + kind
+  // `redefines`, sin línea. El esquema ya da el dato (`SchemaField.redefines`).
+  const seenRedef = new Set<string>()
+  const walkRedef = (f: SchemaField): void => {
+    if (f.type !== 'unresolved-copy' && f.redefines) {
+      const a = f.name.toUpperCase()
+      const b = f.redefines.toUpperCase()
+      if (known.has(a) && known.has(b) && a !== b) {
+        for (const [from, to] of [
+          [a, b],
+          [b, a],
+        ] as const) {
+          const k = `${from}->${to}`
+          if (seenRedef.has(k)) continue
+          seenRedef.add(k)
+          assignments.push({
+            from,
+            to,
+            verb: 'REDEFINES',
+            line: 0,
+            snippet: `${a} REDEFINES ${b}`,
+            uncertain: true,
+            kind: 'redefines',
+          })
+        }
+      }
+    }
+    for (const c of f.children) walkRedef(c)
+  }
+  for (const rec of data.records) walkRedef(rec)
+
+  // Dedupe de aristas de sentencia (una misma línea puede repetir el par).
+  const edgeSeen = new Set<string>()
+  const dedupedEdges = assignments.filter(e => {
+    const k = `${e.from}|${e.to}|${e.verb}|${e.line}|${e.kind ?? ''}`
+    if (edgeSeen.has(k)) return false
+    edgeSeen.add(k)
+    return true
+  })
+
+  return { fields, assignments: dedupedEdges, unknownNames: [...unknownNames].sort(), fragment }
 }
 
 // ── Utilidades y constantes de módulo ────────────────────────────────
@@ -671,6 +783,25 @@ const CORRESPONDING_RE = /(?<![\w-])(?:CORRESPONDING|CORR)(?![\w-])/i
 const VERB_SPLIT_RE =
   /(?<![\w-])(MOVE|COMPUTE|ADD|SUBTRACT|MULTIPLY|DIVIDE|SET|INITIALIZE|ACCEPT|DISPLAY|STRING|UNSTRING|INSPECT|REWRITE|READ|RETURN|WRITE|RELEASE|PERFORM|EVALUATE|WHEN|IF|CALL|GO|SEARCH|SORT|MERGE|UNLOCK|START|DELETE|CANCEL|OPEN|CLOSE)(?![\w-])/gi
 
+// Verbos que COPIAN o DERIVAN un valor: de ellos salen aristas de
+// propagación (fuente→destino). READ/RETURN quedan fuera a propósito —
+// su origen es externo (el fichero), no otro campo; el "usos" ya los
+// muestra. IF/EVALUATE/PERFORM tampoco: no mueven datos.
+const EDGE_VERBS = new Set<string>([
+  'MOVE',
+  'COMPUTE',
+  'ADD',
+  'SUBTRACT',
+  'MULTIPLY',
+  'DIVIDE',
+  'SET',
+  'STRING',
+  'UNSTRING',
+  'WRITE',
+  'REWRITE',
+  'RELEASE',
+])
+
 /** Índice del primer `kw` (palabra completa, case-insensitive) en `t`, o -1. */
 function kw(t: string, k: string): number {
   const m = new RegExp(`(?<![\\w-])${k}(?![\\w-])`, 'i').exec(t)
@@ -685,6 +816,46 @@ function kwAny(t: string, ks: string[]): number {
     if (i >= 0 && (best < 0 || i < best)) best = i
   }
   return best
+}
+
+/** `text` con el contenido de todo paréntesis reemplazado por espacios
+ *  (misma longitud): deja fuera subíndices y modificación de referencia. */
+function maskParens(text: string): string {
+  let depth = 0
+  let out = ''
+  for (const ch of text) {
+    if (ch === '(') {
+      depth++
+      out += ' '
+    } else if (ch === ')') {
+      if (depth > 0) depth--
+      out += ' '
+    } else {
+      out += depth > 0 ? ' ' : ch
+    }
+  }
+  return out
+}
+
+/** Rangos `[inicio, fin)` del contenido de cada paréntesis de primer nivel. */
+function parenRanges(text: string): [number, number][] {
+  const ranges: [number, number][] = []
+  let depth = 0
+  let start = -1
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (ch === '(') {
+      if (depth === 0) start = i + 1
+      depth++
+    } else if (ch === ')') {
+      if (depth > 0) depth--
+      if (depth === 0 && start >= 0) {
+        ranges.push([start, i])
+        start = -1
+      }
+    }
+  }
+  return ranges
 }
 
 /** Colapsa a una línea y recorta — el snippet de contexto de la ficha. */

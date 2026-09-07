@@ -2,6 +2,7 @@ export { parse } from './parser.js'
 export { parseFlow } from './flow-parser.js'
 export { parseInventory } from './inventory.js'
 export { collectReferences } from './references.js'
+export { traceField } from './dataflow.js'
 export { checkAdvisories } from './advisories.js'
 export { renderDossier, type DossierInput } from './dossier.js'
 export { GLOSSARY, GLOSSARY_BY_ID, segmentText, type GlossaryEntry, type Segment } from './glossary.js'
@@ -28,6 +29,7 @@ export type {
   ConditionValue,
   CrossProgramCall,
   CursorUsage,
+  AssignmentEdge,
   DataSection,
   DataType,
   ExecBlock,
@@ -49,4 +51,7 @@ export type {
   ReferenceResult,
   RenamesGroup,
   SchemaField,
+  TracePath,
+  TraceResult,
+  TraceStep,
 } from './types.js'

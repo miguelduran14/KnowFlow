@@ -1,6 +1,7 @@
-import type { FieldReference, ParseResult, ReferenceResult, SchemaField } from 'knowflow'
-import { PushPin, X } from '@phosphor-icons/react'
-import { useCallback, useEffect, useState } from 'react'
+import type { FieldReference, ParseResult, ReferenceResult, SchemaField, TraceResult, TraceStep } from 'knowflow'
+import { traceField } from 'knowflow'
+import { ArrowLineLeft, ArrowLineRight, PushPin, X } from '@phosphor-icons/react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 /**
  * Mapa de bytes: el esquema como memoria. Combina las direcciones A+B
@@ -347,96 +348,269 @@ function FieldUses({
   const target = field.name.toUpperCase()
   const usage = references.fields.find(f => f.name === target)
 
-  if (!usage) {
-    return (
-      <div className="bm-uses bm-uses--empty">
-        No se lee ni se escribe en la PROCEDURE DIVISION del fuente aportado
-        {references.fragment ? ' (fuente parcial)' : ''}.
-      </div>
-    )
-  }
-
   // Lista única en orden de línea: una ocurrencia `read-write` vive en
   // `reads` y `writes` a la vez, así que se deduplica por línea+verbo+rol.
-  const seen = new Set<string>()
   const rows: FieldReference[] = []
-  for (const ref of [...usage.writes, ...usage.reads, ...usage.unclassified].sort((a, b) => a.line - b.line)) {
-    const key = `${ref.line}|${ref.verb}|${ref.kind}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    rows.push(ref)
+  if (usage) {
+    const seen = new Set<string>()
+    for (const ref of [...usage.writes, ...usage.reads, ...usage.unclassified].sort((a, b) => a.line - b.line)) {
+      const key = `${ref.line}|${ref.verb}|${ref.kind}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      rows.push(ref)
+    }
   }
 
   return (
     <div className="bm-uses">
-      <div className="bm-uses__head">
-        <span className="bm-uses__title">Usos</span>
-        <span className="bm-uses__counts">
-          <b>{usage.reads.length}</b> lect · <b>{usage.writes.length}</b> escr
-          {usage.unclassified.length > 0 && (
-            <>
-              {' '}
-              · <b>{usage.unclassified.length}</b> sin clasif.
-            </>
-          )}
+      {usage ? (
+        <>
+          <div className="bm-uses__head">
+            <span className="bm-uses__title">Usos</span>
+            <span className="bm-uses__counts">
+              <b>{usage.reads.length}</b> lect · <b>{usage.writes.length}</b> escr
+              {usage.unclassified.length > 0 && (
+                <>
+                  {' '}
+                  · <b>{usage.unclassified.length}</b> sin clasif.
+                </>
+              )}
+            </span>
+          </div>
+          <ul className="bm-uses__list">
+            {rows.map((ref, i) => {
+              const meta = ROLE_META[ref.kind]
+              return (
+                <li key={i} className="bm-uses__row">
+                  <span className={`bm-role ${meta.cls}`} title={meta.title}>
+                    {meta.label}
+                  </span>
+                  {onJumpToParagraph && !ref.paragraphImplicit ? (
+                    <button
+                      type="button"
+                      className="bm-uses__para bm-uses__para--link"
+                      onClick={() => onJumpToParagraph(ref.paragraph)}
+                      title="Enfocar este párrafo en el diagrama de Flujo"
+                    >
+                      {ref.paragraph}
+                    </button>
+                  ) : (
+                    <span className="bm-uses__para">
+                      {ref.paragraph}
+                      {ref.paragraphImplicit ? ' (entrada)' : ''}
+                    </span>
+                  )}
+                  {onOpenCode ? (
+                    <button
+                      type="button"
+                      className="bm-uses__line bm-uses__line--link"
+                      onClick={() => onOpenCode(ref.line)}
+                      title="Ver esta línea en el código"
+                    >
+                      L{ref.line}
+                    </button>
+                  ) : (
+                    <span className="bm-uses__line">L{ref.line}</span>
+                  )}
+                  <span className="bm-uses__verb">{ref.verb}</span>
+                  {ref.via88 && (
+                    <span className="bm-uses__mark" title={`Referenciado por la condición ${ref.via88}`}>
+                      vía {ref.via88}
+                    </span>
+                  )}
+                  {ref.uncertain && (
+                    <span
+                      className="bm-uses__mark bm-uses__mark--warn"
+                      title="Rol no seguro: argumento por referencia de una CALL, MOVE CORRESPONDING, homónimo del esquema o SQL dinámico"
+                    >
+                      ~ incierto
+                    </span>
+                  )}
+                  <span className="bm-uses__snippet" title={ref.snippet}>
+                    {ref.snippet}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      ) : (
+        <div className="bm-uses__none">
+          No se lee ni se escribe en la PROCEDURE DIVISION del fuente aportado
+          {references.fragment ? ' (fuente parcial)' : ''}.
+        </div>
+      )}
+
+      <FieldTrace
+        target={target}
+        references={references}
+        onJumpToParagraph={onJumpToParagraph}
+        onOpenCode={onOpenCode}
+      />
+    </div>
+  )
+}
+
+// ── Trazabilidad transitiva (P7) ──────────────────────────────────────
+
+/** Un salto directo de la traza: el otro extremo + verbo + salto al código. */
+function TraceStepRow({
+  step,
+  direction,
+  onJumpToParagraph,
+  onOpenCode,
+}: {
+  step: TraceStep
+  direction: 'upstream' | 'downstream'
+  onJumpToParagraph: ((name: string) => void) | undefined
+  onOpenCode: ((line: number) => void) | undefined
+}) {
+  const peer = direction === 'upstream' ? step.from : step.to
+  return (
+    <li className="bm-trace__row">
+      {step.paragraph && onJumpToParagraph ? (
+        <button
+          type="button"
+          className="bm-trace__peer bm-uses__para--link"
+          onClick={() => onJumpToParagraph(step.paragraph!)}
+          title={`Asignado en ${step.paragraph} — enfocar en Flujo`}
+        >
+          {peer}
+        </button>
+      ) : (
+        <span className="bm-trace__peer">{peer}</span>
+      )}
+      <span className="bm-trace__via">{step.redefines ? 'solape REDEFINES' : step.verb}</span>
+      {step.line > 0 &&
+        (onOpenCode ? (
+          <button
+            type="button"
+            className="bm-uses__line bm-uses__line--link"
+            onClick={() => onOpenCode(step.line)}
+            title="Ver esta línea en el código"
+          >
+            L{step.line}
+          </button>
+        ) : (
+          <span className="bm-uses__line">L{step.line}</span>
+        ))}
+      {step.uncertain && !step.redefines && (
+        <span className="bm-uses__mark bm-uses__mark--warn" title="Flujo no seguro">
+          ~
         </span>
+      )}
+    </li>
+  )
+}
+
+/** Un lado de la traza (arriba o abajo): saltos directos + cadena completa. */
+function TraceSide({
+  result,
+  direction,
+  label,
+  Icon,
+  onJumpToParagraph,
+  onOpenCode,
+}: {
+  result: TraceResult
+  direction: 'upstream' | 'downstream'
+  label: string
+  Icon: typeof ArrowLineLeft
+  onJumpToParagraph: ((name: string) => void) | undefined
+  onOpenCode: ((line: number) => void) | undefined
+}) {
+  const [openChain, setOpenChain] = useState(false)
+  if (result.direct.length === 0) return null
+  const arrow = direction === 'upstream' ? ' ← ' : ' → '
+  const deeper = result.paths.some(p => p.nodes.length > 2)
+
+  return (
+    <div className="bm-trace__side">
+      <div className="bm-trace__head">
+        <Icon size={12} weight="bold" />
+        <span>{label}</span>
+        <b>{result.direct.length}</b>
       </div>
-      <ul className="bm-uses__list">
-        {rows.map((ref, i) => {
-          const meta = ROLE_META[ref.kind]
-          return (
-            <li key={i} className="bm-uses__row">
-              <span className={`bm-role ${meta.cls}`} title={meta.title}>
-                {meta.label}
-              </span>
-              {onJumpToParagraph && !ref.paragraphImplicit ? (
-                <button
-                  type="button"
-                  className="bm-uses__para bm-uses__para--link"
-                  onClick={() => onJumpToParagraph(ref.paragraph)}
-                  title="Enfocar este párrafo en el diagrama de Flujo"
-                >
-                  {ref.paragraph}
-                </button>
-              ) : (
-                <span className="bm-uses__para">
-                  {ref.paragraph}
-                  {ref.paragraphImplicit ? ' (entrada)' : ''}
-                </span>
-              )}
-              {onOpenCode ? (
-                <button
-                  type="button"
-                  className="bm-uses__line bm-uses__line--link"
-                  onClick={() => onOpenCode(ref.line)}
-                  title="Ver esta línea en el código"
-                >
-                  L{ref.line}
-                </button>
-              ) : (
-                <span className="bm-uses__line">L{ref.line}</span>
-              )}
-              <span className="bm-uses__verb">{ref.verb}</span>
-              {ref.via88 && (
-                <span className="bm-uses__mark" title={`Referenciado por la condición ${ref.via88}`}>
-                  vía {ref.via88}
-                </span>
-              )}
-              {ref.uncertain && (
-                <span
-                  className="bm-uses__mark bm-uses__mark--warn"
-                  title="Rol no seguro: argumento por referencia de una CALL, MOVE CORRESPONDING, homónimo del esquema o SQL dinámico"
-                >
-                  ~ incierto
-                </span>
-              )}
-              <span className="bm-uses__snippet" title={ref.snippet}>
-                {ref.snippet}
-              </span>
-            </li>
-          )
-        })}
+      <ul className="bm-trace__list">
+        {result.direct.map((s, i) => (
+          <TraceStepRow
+            key={i}
+            step={s}
+            direction={direction}
+            onJumpToParagraph={onJumpToParagraph}
+            onOpenCode={onOpenCode}
+          />
+        ))}
       </ul>
+      {deeper && (
+        <>
+          <button type="button" className="bm-trace__toggle" onClick={() => setOpenChain(v => !v)}>
+            {openChain ? 'ocultar cadena completa' : 'ver cadena completa'}
+          </button>
+          {openChain && (
+            <ul className="bm-trace__paths">
+              {result.paths.map((p, i) => (
+                <li key={i} className="bm-trace__path">
+                  <span className="bm-trace__chain">{p.nodes.join(arrow)}</span>
+                  {p.uncertain && <span className="bm-trace__flag bm-trace__flag--warn">~</span>}
+                  {p.cyclic && <span className="bm-trace__flag">ciclo</span>}
+                  {p.truncated && <span className="bm-trace__flag">…</span>}
+                </li>
+              ))}
+              {result.truncated && <li className="bm-trace__path bm-trace__path--more">… caminos recortados</li>}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * De dónde viene el valor del campo fijado y a dónde va, encadenando
+ * MOVE/COMPUTE/… y solapes REDEFINES (P7). Insensible al orden de
+ * ejecución: cada arista es un flujo POSIBLE ("puede venir de / puede ir
+ * a"). Sin aristas → no se dibuja nada.
+ */
+function FieldTrace({
+  target,
+  references,
+  onJumpToParagraph,
+  onOpenCode,
+}: {
+  target: string
+  references: ReferenceResult
+  onJumpToParagraph: ((name: string) => void) | undefined
+  onOpenCode: ((line: number) => void) | undefined
+}) {
+  const up = useMemo(() => traceField(references, target, 'upstream'), [references, target])
+  const down = useMemo(() => traceField(references, target, 'downstream'), [references, target])
+  if (up.direct.length === 0 && down.direct.length === 0) return null
+
+  return (
+    <div className="bm-trace">
+      <div
+        className="bm-trace__legend"
+        title="Cada arista es un flujo posible; no se tiene en cuenta el orden de ejecución"
+      >
+        Trazabilidad · puede venir de / puede ir a
+      </div>
+      <TraceSide
+        result={up}
+        direction="upstream"
+        label="De dónde viene"
+        Icon={ArrowLineLeft}
+        onJumpToParagraph={onJumpToParagraph}
+        onOpenCode={onOpenCode}
+      />
+      <TraceSide
+        result={down}
+        direction="downstream"
+        label="A dónde va"
+        Icon={ArrowLineRight}
+        onJumpToParagraph={onJumpToParagraph}
+        onOpenCode={onOpenCode}
+      />
     </div>
   )
 }

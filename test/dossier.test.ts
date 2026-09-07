@@ -138,6 +138,29 @@ describe('renderDossier', () => {
     expect(md).toContain('`R` MAIN-PARA L10 — ADD')
   })
 
+  it('renders the "trazabilidad de datos" section with the assignment adjacency', () => {
+    const source = [
+      '       IDENTIFICATION DIVISION.',
+      '       PROGRAM-ID. TRAZA.',
+      '       DATA DIVISION.',
+      '       WORKING-STORAGE SECTION.',
+      '       01  WS-A   PIC S9(5).',
+      '       01  WS-B   PIC S9(5).',
+      '       01  WS-C   PIC S9(5).',
+      '       PROCEDURE DIVISION.',
+      '       MAIN-PARA.',
+      '           MOVE WS-A TO WS-B',
+      '           COMPUTE WS-C = WS-B + 1.',
+    ].join('\n')
+    const base = analyze(source)
+    const references = collectReferences(source, base.data)
+    const md = renderDossier({ ...base, references })
+
+    expect(md).toContain('## Trazabilidad de datos')
+    expect(md).toContain('- **WS-B** — viene de WS-A (MOVE L10); va a WS-C (COMPUTE L11)')
+    expect(md).toContain('- **WS-C** — viene de WS-B (COMPUTE L11)')
+  })
+
   it('lists PROCEDURE names that do not match the schema as a verification limit', () => {
     const source = [
       '       DATA DIVISION.',

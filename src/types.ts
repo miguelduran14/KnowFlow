@@ -441,10 +441,84 @@ export interface FieldUsage {
   unclassified: FieldReference[]
 }
 
+/**
+ * Una arista de propagación de valor `from → to`: una sentencia (o un
+ * solape de memoria) por la que el valor de un campo llega a otro. Es la
+ * base de la traza transitiva (`traceField`). Insensible al orden de
+ * ejecución: la arista dice que ese flujo es POSIBLE en el fuente, no que
+ * sea el que gana al final.
+ */
+export interface AssignmentEdge {
+  /** Campo origen (mayúsculas) */
+  from: string
+  /** Campo destino (mayúsculas) */
+  to: string
+  /** Verbo que la origina: MOVE, COMPUTE, ADD… o `REDEFINES` para un solape */
+  verb: string
+  /** Párrafo donde ocurre. Ausente en las aristas `redefines` (no hay sentencia) */
+  paragraph?: string | undefined
+  paragraphImplicit?: boolean | undefined
+  /** Línea 1-based del fuente. 0 en las aristas `redefines` */
+  line: number
+  /** La sentencia colapsada a una línea (o `A REDEFINES B`) */
+  snippet: string
+  /**
+   * El flujo no es una copia limpia: MOVE CORRESPONDING (subcampos no
+   * desglosados), grupo, argumento por referencia de una CALL, homónimo,
+   * o un solape REDEFINES (reinterpretación de bytes, no asignación).
+   */
+  uncertain?: boolean | undefined
+  /**
+   * `redefines` = el flujo es un solape de memoria (escribir un alias
+   * cambia los bytes del otro), no una sentencia de asignación.
+   */
+  kind?: 'statement' | 'redefines' | undefined
+}
+
+/** Un salto de la traza: una arista recorrida */
+export interface TraceStep {
+  from: string
+  to: string
+  verb: string
+  paragraph?: string | undefined
+  line: number
+  uncertain?: boolean | undefined
+  /** El salto es un solape REDEFINES, no una sentencia */
+  redefines?: boolean | undefined
+}
+
+/** Un camino completo de la traza, del campo pedido a una raíz/hoja */
+export interface TracePath {
+  /** Campos en orden: `[pedido, …, raíz|hoja]` */
+  nodes: string[]
+  steps: TraceStep[]
+  /** El camino se cortó por tope de profundidad */
+  truncated?: boolean | undefined
+  /** El camino topó con un ciclo y se detuvo */
+  cyclic?: boolean | undefined
+  /** Algún tramo del camino es incierto o un solape */
+  uncertain?: boolean | undefined
+}
+
+/** Resultado de trazar un campo aguas arriba o aguas abajo */
+export interface TraceResult {
+  /** Aristas a un solo salto desde el campo pedido */
+  direct: TraceStep[]
+  /** Todos los caminos hasta raíces (arriba) u hojas (abajo), con topes */
+  paths: TracePath[]
+  /** true si se recortó por número de caminos */
+  truncated: boolean
+}
+
 /** Dónde se usa cada campo — resultado de la pasada de referencias */
 export interface ReferenceResult {
   /** Uso por data-name, en orden alfabético. Solo campos del esquema que se tocan */
   fields: FieldUsage[]
+  /**
+   * Aristas de propagación de valor campo→campo (y solapes REDEFINES).
+   * `traceField` (en `dataflow`) las recorre para la traza transitiva.
+   */
+  assignments: AssignmentEdge[]
   /**
    * Nombres citados en posición de operando en la PROCEDURE que no casan
    * con ningún campo del esquema aportado: pueden vivir en un copybook

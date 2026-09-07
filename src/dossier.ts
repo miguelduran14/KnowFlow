@@ -172,6 +172,58 @@ function fieldUsageSection(references: ReferenceResult, out: string[]): void {
   out.push('')
 }
 
+/**
+ * Sección "trazabilidad de datos": la adyacencia de propagación de valor
+ * campo→campo (P7) — de qué campos viene el valor de cada uno y a cuáles
+ * va, con verbo y línea. Insensible al orden de ejecución: cada arista es
+ * un flujo POSIBLE. Las cadenas transitivas son cosa de la GUI; aquí va la
+ * tabla de adyacencia, acotada.
+ */
+function dataTraceSection(references: ReferenceResult, out: string[]): void {
+  const edges = references.assignments
+  if (edges.length === 0) return
+
+  type Edge = (typeof edges)[number]
+  const incoming = new Map<string, Edge[]>()
+  const outgoing = new Map<string, Edge[]>()
+  const push = (m: Map<string, Edge[]>, k: string, e: Edge): void => {
+    const list = m.get(k)
+    if (list) list.push(e)
+    else m.set(k, [e])
+  }
+  for (const e of edges) {
+    push(incoming, e.to, e)
+    push(outgoing, e.from, e)
+  }
+  const names = [...new Set([...incoming.keys(), ...outgoing.keys()])].sort()
+
+  out.push('## Trazabilidad de datos')
+  out.push('')
+  out.push(
+    '_Aristas de propagación de valor campo→campo (MOVE/COMPUTE/…) y solapes REDEFINES, verificadas contra el fuente. ' +
+      'Insensible al orden de ejecución: cada arista es un flujo POSIBLE, no el que gana al final. ' +
+      '`~` incierto, `solape` = REDEFINES._',
+  )
+  out.push('')
+
+  const MAX_PER_DIR = 10
+  const fmt = (peer: string, e: Edge): string => {
+    if (e.kind === 'redefines') return `${cell(peer)} (solape)`
+    const mark = e.uncertain ? ' ~' : ''
+    return `${cell(peer)} (${cell(e.verb)} L${e.line}${mark})`
+  }
+
+  for (const name of names) {
+    const from = (incoming.get(name) ?? []).slice(0, MAX_PER_DIR).map(e => fmt(e.from, e))
+    const to = (outgoing.get(name) ?? []).slice(0, MAX_PER_DIR).map(e => fmt(e.to, e))
+    const parts: string[] = []
+    if (from.length > 0) parts.push(`viene de ${from.join(', ')}`)
+    if (to.length > 0) parts.push(`va a ${to.join(', ')}`)
+    out.push(`- **${cell(name)}** — ${parts.join('; ')}`)
+  }
+  out.push('')
+}
+
 export function renderDossier(input: DossierInput): string {
   const { data, flow, inventory, advisories, references, explanation, sourceName } = input
   const out: string[] = []
@@ -222,7 +274,10 @@ export function renderDossier(input: DossierInput): string {
     out.push('')
   }
 
-  if (references) fieldUsageSection(references, out)
+  if (references) {
+    fieldUsageSection(references, out)
+    dataTraceSection(references, out)
+  }
 
   const inventoryHasFacts =
     inventory !== undefined &&

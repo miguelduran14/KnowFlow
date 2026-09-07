@@ -292,3 +292,114 @@ describe('references: snippet', () => {
     expect(usage(r, 'WS-B')!.writes[0]!.snippet).toBe('MOVE WS-A TO WS-B')
   })
 })
+
+describe('references: subíndices y modificación de referencia', () => {
+  it('el subíndice de un destino se LEE, no se escribe (MOVE A TO B(I))', () => {
+    const r = prog(
+      [
+        '       01  WS-A     PIC X.',
+        '       01  WS-I     PIC 9(4) COMP.',
+        '       01  WS-T.',
+        '         05 WS-EL   PIC X OCCURS 10.',
+      ],
+      ['       P.', '           MOVE WS-A TO WS-EL(WS-I).'],
+    )
+    expect(usage(r, 'WS-EL')!.writes).toHaveLength(1)
+    expect(usage(r, 'WS-I')!.reads).toHaveLength(1)
+    expect(usage(r, 'WS-I')!.writes).toHaveLength(0)
+  })
+
+  it('la longitud de una modificación de referencia se lee', () => {
+    const r = prog(
+      ['       01  WS-A   PIC X(20).', '       01  WS-B   PIC X(20).', '       01  WS-L   PIC 9(4) COMP.'],
+      ['       P.', '           MOVE WS-A TO WS-B(1:WS-L).'],
+    )
+    expect(usage(r, 'WS-B')!.writes).toHaveLength(1)
+    expect(usage(r, 'WS-L')!.reads).toHaveLength(1)
+    expect(usage(r, 'WS-L')!.writes).toHaveLength(0)
+  })
+})
+
+describe('references: aristas de asignación (P7)', () => {
+  const edge = (r: ReferenceResult, from: string, to: string) =>
+    r.assignments.find(e => e.from === from && e.to === to)
+
+  it('MOVE A TO B produce una arista A→B', () => {
+    const r = prog(SCHEMA, ['       P.', '           MOVE WS-A TO WS-B.'])
+    const e = edge(r, 'WS-A', 'WS-B')!
+    expect(e).toBeDefined()
+    expect(e.verb).toBe('MOVE')
+    expect(e.kind).toBe('statement')
+    expect(e.line).toBe(14) // SCHEMA (7) + cabeceras (4) + P. → MOVE en L14
+  })
+
+  it('COMPUTE C = A + B produce A→C y B→C', () => {
+    const r = prog(SCHEMA, ['       P.', '           COMPUTE WS-C = WS-A + WS-B.'])
+    expect(edge(r, 'WS-A', 'WS-C')).toBeDefined()
+    expect(edge(r, 'WS-B', 'WS-C')).toBeDefined()
+  })
+
+  it('ADD A TO B produce A→B (aunque B sea también lectura-escritura)', () => {
+    const r = prog(SCHEMA, ['       P.', '           ADD WS-A TO WS-B.'])
+    expect(edge(r, 'WS-A', 'WS-B')).toBeDefined()
+    expect(edge(r, 'WS-B', 'WS-B')).toBeUndefined() // sin auto-aristas
+  })
+
+  it('WRITE rec FROM x produce x→rec', () => {
+    const r = prog(
+      ['       01  RPT-REC  PIC X(80).', '       01  WS-LINEA PIC X(80).'],
+      ['       P.', '           WRITE RPT-REC FROM WS-LINEA.'],
+    )
+    expect(edge(r, 'WS-LINEA', 'RPT-REC')).toBeDefined()
+  })
+
+  it('IF, READ y PERFORM NO producen aristas de asignación', () => {
+    const r = prog(SCHEMA, [
+      '       P.',
+      '           IF WS-A = WS-B',
+      '               CONTINUE',
+      '           END-IF',
+      '           READ IN-FILE INTO WS-C.',
+    ])
+    expect(r.assignments.filter(e => e.kind === 'statement')).toHaveLength(0)
+  })
+
+  it('el subíndice no es origen de una arista (MOVE A TO B(I) no da I→B)', () => {
+    const r = prog(
+      [
+        '       01  WS-A     PIC X.',
+        '       01  WS-I     PIC 9(4) COMP.',
+        '       01  WS-T.',
+        '         05 WS-EL   PIC X OCCURS 10.',
+      ],
+      ['       P.', '           MOVE WS-A TO WS-EL(WS-I).'],
+    )
+    expect(edge(r, 'WS-A', 'WS-EL')).toBeDefined()
+    expect(edge(r, 'WS-I', 'WS-EL')).toBeUndefined()
+  })
+
+  it('REDEFINES genera aristas de solape bidireccionales marcadas', () => {
+    const r = prog(
+      [
+        '       01  WS-REC.',
+        '         05 WS-RAW   PIC X(4).',
+        '         05 WS-NUM REDEFINES WS-RAW PIC 9(4).',
+      ],
+      ['       P.', '           CONTINUE.'],
+    )
+    const ab = edge(r, 'WS-RAW', 'WS-NUM')!
+    const ba = edge(r, 'WS-NUM', 'WS-RAW')!
+    expect(ab.kind).toBe('redefines')
+    expect(ab.uncertain).toBe(true)
+    expect(ab.line).toBe(0)
+    expect(ba.kind).toBe('redefines')
+  })
+
+  it('MOVE CORRESPONDING marca la arista como incierta', () => {
+    const r = prog(
+      ['       01  G1.', '         05 X PIC X.', '       01  G2.', '         05 X2 PIC X.'],
+      ['       P.', '           MOVE CORRESPONDING G1 TO G2.'],
+    )
+    expect(edge(r, 'G1', 'G2')!.uncertain).toBe(true)
+  })
+})
