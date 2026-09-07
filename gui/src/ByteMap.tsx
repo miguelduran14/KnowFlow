@@ -1,4 +1,4 @@
-import type { ParseResult, SchemaField } from 'knowflow'
+import type { FieldReference, ParseResult, ReferenceResult, SchemaField } from 'knowflow'
 import { PushPin, X } from '@phosphor-icons/react'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -318,19 +318,149 @@ function RecordHead({ record }: { record: SchemaField }) {
   )
 }
 
+// ── Panel de usos (where-used) del campo FIJADO ────────────────────────
+
+const ROLE_META: Record<FieldReference['kind'], { label: string; cls: string; title: string }> = {
+  read: { label: 'R', cls: 'bm-role--r', title: 'Se lee' },
+  write: { label: 'W', cls: 'bm-role--w', title: 'Se escribe' },
+  'read-write': { label: 'RW', cls: 'bm-role--rw', title: 'Se lee y se escribe en la misma sentencia' },
+  unclassified: { label: '?', cls: 'bm-role--u', title: 'El verbo no permite afirmar el rol' },
+}
+
+/**
+ * Dónde se lee y dónde se escribe el campo fijado, en la PROCEDURE
+ * DIVISION (P6). Se apoya en la pasada `collectReferences` del motor —
+ * todo son hechos del parser; lo incierto va marcado. Cada fila salta al
+ * párrafo en el diagrama de Flujo y a la línea en el código.
+ */
+function FieldUses({
+  field,
+  references,
+  onJumpToParagraph,
+  onOpenCode,
+}: {
+  field: SchemaField
+  references: ReferenceResult
+  onJumpToParagraph: ((name: string) => void) | undefined
+  onOpenCode: ((line: number) => void) | undefined
+}) {
+  const target = field.name.toUpperCase()
+  const usage = references.fields.find(f => f.name === target)
+
+  if (!usage) {
+    return (
+      <div className="bm-uses bm-uses--empty">
+        No se lee ni se escribe en la PROCEDURE DIVISION del fuente aportado
+        {references.fragment ? ' (fuente parcial)' : ''}.
+      </div>
+    )
+  }
+
+  // Lista única en orden de línea: una ocurrencia `read-write` vive en
+  // `reads` y `writes` a la vez, así que se deduplica por línea+verbo+rol.
+  const seen = new Set<string>()
+  const rows: FieldReference[] = []
+  for (const ref of [...usage.writes, ...usage.reads, ...usage.unclassified].sort((a, b) => a.line - b.line)) {
+    const key = `${ref.line}|${ref.verb}|${ref.kind}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    rows.push(ref)
+  }
+
+  return (
+    <div className="bm-uses">
+      <div className="bm-uses__head">
+        <span className="bm-uses__title">Usos</span>
+        <span className="bm-uses__counts">
+          <b>{usage.reads.length}</b> lect · <b>{usage.writes.length}</b> escr
+          {usage.unclassified.length > 0 && (
+            <>
+              {' '}
+              · <b>{usage.unclassified.length}</b> sin clasif.
+            </>
+          )}
+        </span>
+      </div>
+      <ul className="bm-uses__list">
+        {rows.map((ref, i) => {
+          const meta = ROLE_META[ref.kind]
+          return (
+            <li key={i} className="bm-uses__row">
+              <span className={`bm-role ${meta.cls}`} title={meta.title}>
+                {meta.label}
+              </span>
+              {onJumpToParagraph && !ref.paragraphImplicit ? (
+                <button
+                  type="button"
+                  className="bm-uses__para bm-uses__para--link"
+                  onClick={() => onJumpToParagraph(ref.paragraph)}
+                  title="Enfocar este párrafo en el diagrama de Flujo"
+                >
+                  {ref.paragraph}
+                </button>
+              ) : (
+                <span className="bm-uses__para">
+                  {ref.paragraph}
+                  {ref.paragraphImplicit ? ' (entrada)' : ''}
+                </span>
+              )}
+              {onOpenCode ? (
+                <button
+                  type="button"
+                  className="bm-uses__line bm-uses__line--link"
+                  onClick={() => onOpenCode(ref.line)}
+                  title="Ver esta línea en el código"
+                >
+                  L{ref.line}
+                </button>
+              ) : (
+                <span className="bm-uses__line">L{ref.line}</span>
+              )}
+              <span className="bm-uses__verb">{ref.verb}</span>
+              {ref.via88 && (
+                <span className="bm-uses__mark" title={`Referenciado por la condición ${ref.via88}`}>
+                  vía {ref.via88}
+                </span>
+              )}
+              {ref.uncertain && (
+                <span
+                  className="bm-uses__mark bm-uses__mark--warn"
+                  title="Rol no seguro: argumento por referencia de una CALL, MOVE CORRESPONDING, homónimo del esquema o SQL dinámico"
+                >
+                  ~ incierto
+                </span>
+              )}
+              <span className="bm-uses__snippet" title={ref.snippet}>
+                {ref.snippet}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
 /**
  * Ficha única del campo, anclada como pie pegajoso (sticky) al fondo del
  * scroll: así no se pierde de vista aunque el registro sea muy alto. Muestra
  * el campo fijado (clic) o, si no hay ninguno, el que se está sobrevolando.
+ * Al FIJAR un campo, la ficha crece con el panel de usos (P6).
  */
 function Detail({
   field,
   pinned,
   onUnpin,
+  references,
+  onJumpToParagraph,
+  onOpenCode,
 }: {
   field: SchemaField | undefined
   pinned: boolean
   onUnpin: () => void
+  references: ReferenceResult | undefined
+  onJumpToParagraph: ((name: string) => void) | undefined
+  onOpenCode: ((line: number) => void) | undefined
 }) {
   return (
     <div
@@ -356,6 +486,14 @@ function Detail({
               <X size={13} weight="bold" />
             </button>
           )}
+          {pinned && references && field.type !== 'unresolved-copy' && (
+            <FieldUses
+              field={field}
+              references={references}
+              onJumpToParagraph={onJumpToParagraph}
+              onOpenCode={onOpenCode}
+            />
+          )}
         </>
       ) : (
         'Pasa el ratón (o tabula) por un campo para ver su ficha · clic para fijarla.'
@@ -364,7 +502,17 @@ function Detail({
   )
 }
 
-export function ByteMap({ data }: { data: ParseResult }) {
+export function ByteMap({
+  data,
+  references,
+  onJumpToParagraph,
+  onOpenCode,
+}: {
+  data: ParseResult
+  references?: ReferenceResult | undefined
+  onJumpToParagraph?: ((name: string) => void) | undefined
+  onOpenCode?: ((line: number) => void) | undefined
+}) {
   // Campo sobrevolado (previsualización) y campo fijado al clic. La ficha
   // muestra el fijado si lo hay; si no, el sobrevolado — así el hover NO pisa
   // un campo que has clavado para leerlo con calma.
@@ -442,7 +590,14 @@ export function ByteMap({ data }: { data: ParseResult }) {
         />
       ))}
 
-      <Detail field={shown} pinned={pinned !== undefined} onUnpin={() => setPinned(undefined)} />
+      <Detail
+        field={shown}
+        pinned={pinned !== undefined}
+        onUnpin={() => setPinned(undefined)}
+        references={references}
+        onJumpToParagraph={onJumpToParagraph}
+        onOpenCode={onOpenCode}
+      />
     </div>
   )
 }

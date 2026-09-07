@@ -1342,6 +1342,143 @@ body,
   color: var(--text-dim);
 }
 
+/* Panel de usos (where-used) del campo FIJADO (P6). Ocupa toda la anchura
+   de la ficha (flex-basis: 100% fuerza salto de línea en el flex que envuelve)
+   y hace su propio scroll para no crecer más que la pantalla. */
+.bm-uses {
+  flex-basis: 100%;
+  width: 100%;
+  margin-top: 4px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 34vh;
+  overflow-y: auto;
+}
+.bm-uses--empty {
+  color: var(--text-dim);
+  font-style: normal;
+}
+.bm-uses__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.bm-uses__title {
+  font-family: var(--sans);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+.bm-uses__counts {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.bm-uses__counts b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.bm-uses__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.bm-uses__row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  min-width: 0;
+}
+.bm-role {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: 1px solid transparent;
+}
+.bm-role--r {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+.bm-role--w {
+  color: var(--violet);
+  border-color: color-mix(in srgb, var(--violet) 45%, transparent);
+  background: color-mix(in srgb, var(--violet) 12%, transparent);
+}
+.bm-role--rw {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+}
+.bm-role--u {
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+.bm-uses__para,
+.bm-uses__line {
+  flex: none;
+  font-family: var(--mono);
+  color: var(--text);
+}
+.bm-uses__para--link,
+.bm-uses__line--link {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-bottom: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.bm-uses__para--link {
+  color: var(--accent);
+}
+.bm-uses__line--link {
+  color: var(--text-dim);
+}
+.bm-uses__para--link:hover,
+.bm-uses__line--link:hover {
+  color: var(--accent);
+  border-bottom-style: solid;
+}
+.bm-uses__verb {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.bm-uses__mark {
+  flex: none;
+  font-family: var(--sans);
+  font-size: 9px;
+  color: var(--text-dim);
+}
+.bm-uses__mark--warn {
+  color: var(--warn);
+}
+.bm-uses__snippet {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim);
+  opacity: 0.75;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .bm-seg,
   .bm-subseg {

@@ -7,6 +7,7 @@ import type { Explanation } from '../src/explain/explain.js'
 import { parseFlow } from '../src/flow-parser.js'
 import { parseInventory } from '../src/inventory.js'
 import { parse } from '../src/parser.js'
+import { collectReferences } from '../src/references.js'
 
 const FIXTURES = join(import.meta.dirname, 'fixtures')
 
@@ -109,6 +110,49 @@ describe('renderDossier', () => {
     const md = renderDossier(analyze(source))
     expect(md).toContain('## Avisos — cuidado con esto')
     expect(md).toContain('UPDATE sin WHERE')
+  })
+
+  it('renders the "dónde se usa cada campo" section from the reference pass', () => {
+    const source = [
+      '       IDENTIFICATION DIVISION.',
+      '       PROGRAM-ID. USODEMO.',
+      '       DATA DIVISION.',
+      '       WORKING-STORAGE SECTION.',
+      '       01  WS-TOTAL   PIC S9(7) COMP-3.',
+      '       01  WS-LINEA   PIC X(4).',
+      '       PROCEDURE DIVISION.',
+      '       MAIN-PARA.',
+      '           MOVE 0 TO WS-TOTAL',
+      '           ADD WS-LINEA TO WS-TOTAL.',
+    ].join('\n')
+    const base = analyze(source)
+    const references = collectReferences(source, base.data)
+    const md = renderDossier({ ...base, references })
+
+    expect(md).toContain('## Dónde se usa cada campo')
+    expect(md).toContain('- **WS-TOTAL**')
+    expect(md).toContain('`W` MAIN-PARA L9 — MOVE')
+    // ADD WS-LINEA TO WS-TOTAL: WS-TOTAL es lectura-escritura, WS-LINEA lectura
+    expect(md).toContain('`RW` MAIN-PARA L10 — ADD')
+    expect(md).toContain('- **WS-LINEA**')
+    expect(md).toContain('`R` MAIN-PARA L10 — ADD')
+  })
+
+  it('lists PROCEDURE names that do not match the schema as a verification limit', () => {
+    const source = [
+      '       DATA DIVISION.',
+      '       WORKING-STORAGE SECTION.',
+      '       01  WS-OTRO  PIC X(4).',
+      '       PROCEDURE DIVISION.',
+      '       MAIN-PARA.',
+      '           MOVE WS-FANTASMA TO WS-OTRO.',
+    ].join('\n')
+    const base = analyze(source)
+    const references = collectReferences(source, base.data)
+    const md = renderDossier({ ...base, references })
+    expect(md).toContain('## Límites de lo verificado')
+    expect(md).toContain('no casan con el esquema')
+    expect(md).toContain('WS-FANTASMA')
   })
 
   it('falls back to sourceName when there is no PROGRAM-ID', () => {

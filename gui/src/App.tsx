@@ -1,5 +1,6 @@
 import {
   checkAdvisories,
+  collectReferences,
   flowToMermaid,
   linkPrograms,
   linkedFlowToMermaid,
@@ -13,6 +14,7 @@ import {
   type Inventory,
   type LinkedFlow,
   type ParseResult,
+  type ReferenceResult,
 } from 'knowflow'
 import {
   CaretRight,
@@ -459,6 +461,13 @@ function AppShell() {
     () => (source.trim() === '' ? undefined : parseInventory(source)),
     [source],
   )
+  // Where-used por campo: dónde se lee/escribe cada dato en la PROCEDURE
+  // DIVISION. Alimenta el panel de usos de la ficha fijada del Mapa de
+  // bytes y la sección "dónde se usa cada campo" del dossier.
+  const references: ReferenceResult | undefined = useMemo(
+    () => (source.trim() === '' || !data ? undefined : collectReferences(source, data)),
+    [source, data],
+  )
   // Avisos: trampas de mantenimiento ya verificadas contra el fuente (no
   // huecos de fidelidad) — ver `checkAdvisories` en el motor.
   const advisories: Advisory[] = useMemo(
@@ -536,6 +545,7 @@ function AppShell() {
       flow,
       inventory,
       advisories,
+      references,
       explanation,
       sourceName: flow?.programId ?? 'programa pegado',
     })
@@ -548,7 +558,7 @@ function AppShell() {
     a.click()
     a.remove()
     URL.revokeObjectURL(url)
-  }, [data, flow, inventory, advisories, explanation])
+  }, [data, flow, inventory, advisories, references, explanation])
 
   const clearAll = useCallback(() => {
     setSource('')
@@ -640,6 +650,7 @@ function AppShell() {
                   data={data}
                   inventory={inventory}
                   advisories={advisories}
+                  references={references}
                   linked={linked}
                   facts={facts}
                   hasGraph={hasGraph}
@@ -823,6 +834,7 @@ function ActiveView({
   data,
   inventory,
   advisories,
+  references,
   linked,
   facts,
   hasGraph,
@@ -838,6 +850,7 @@ function ActiveView({
   data: ParseResult | undefined
   inventory: Inventory | undefined
   advisories: Advisory[]
+  references: ReferenceResult | undefined
   linked: LinkedFlow | undefined
   facts: {
     data?: ParseResult | undefined
@@ -890,7 +903,16 @@ function ActiveView({
       />
     )
   }
-  if (view === 'data') return data ? <DataPanel data={data} /> : null
+  if (view === 'data') {
+    return data ? (
+      <DataPanel
+        data={data}
+        references={references}
+        onJumpToParagraph={onJumpToParagraph}
+        onOpenCode={onOpenCode}
+      />
+    ) : null
+  }
   if (view === 'inventory') return inventory ? <InventoryPanel inventory={inventory} onOpenCode={onOpenCode} /> : null
   if (view === 'advisories') {
     return (

@@ -381,6 +381,81 @@ export interface Advisory {
   paragraph?: string | undefined
 }
 
+// ── Referencias: dónde se usa cada dato ────────────────────────────────
+
+/**
+ * Rol de una ocurrencia de un campo en una sentencia de la PROCEDURE
+ * DIVISION. `read-write` es un mismo operando que se lee Y se escribe en
+ * la misma sentencia (`ADD 1 TO WS-N`, `SET IX UP BY 1`, un argumento BY
+ * REFERENCE de una CALL). `unclassified` es una ocurrencia real de un
+ * campo del esquema en un verbo cuyo reparto de roles el motor no modela
+ * todavía: se registra —el campo SÍ se toca ahí— pero sin afirmar si se
+ * lee o se escribe (ADR-0003).
+ */
+export type ReferenceKind = 'read' | 'write' | 'read-write' | 'unclassified'
+
+/** Una ocurrencia de un data-name en una sentencia, anclada a su línea */
+export interface FieldReference {
+  /** Nombre del campo del esquema (mayúsculas) al que se atribuye */
+  name: string
+  kind: ReferenceKind
+  /** Verbo COBOL que la origina: MOVE, COMPUTE, IF, PERFORM, EXEC SQL… */
+  verb: string
+  /** Párrafo (o nodo de entrada sintético) donde aparece la sentencia */
+  paragraph: string
+  /** El párrafo es el nodo de entrada sintético, no uno declarado. Ver `FileOperation.paragraphImplicit` */
+  paragraphImplicit?: boolean | undefined
+  /** Línea 1-based del fuente donde aparece el token */
+  line: number
+  /** La sentencia colapsada a una línea, recortada — contexto legible */
+  snippet: string
+  /**
+   * El rol read/write no es seguro: MOVE CORRESPONDING (no se enumeran los
+   * subcampos), un argumento BY REFERENCE de una CALL (el llamado puede
+   * devolver valor), un host variable de SQL dinámico, o un homónimo. Se
+   * marca en vez de afirmar.
+   */
+  uncertain?: boolean | undefined
+  /**
+   * La referencia entró por un nombre de nivel 88 (`IF WS-ACTIVO`,
+   * `SET WS-ACTIVO TO TRUE`): el token del fuente es el de la condición,
+   * y aquí figura su nombre — el uso se atribuye al campo padre.
+   */
+  via88?: string | undefined
+  /**
+   * Hay más de un campo con este nombre en el esquema y no se ha resuelto
+   * la cualificación (`OF`/`IN`): el uso se atribuye a todos los candidatos.
+   */
+  ambiguous?: boolean | undefined
+}
+
+/** Todas las lecturas y escrituras de UN data-name en la PROCEDURE */
+export interface FieldUsage {
+  /** Nombre del campo (mayúsculas) */
+  name: string
+  /** Ocurrencias de lectura (incluye las `read-write`) en orden de línea */
+  reads: FieldReference[]
+  /** Ocurrencias de escritura (incluye las `read-write`) en orden de línea */
+  writes: FieldReference[]
+  /** Ocurrencias en verbos cuyo reparto de roles no se modela todavía */
+  unclassified: FieldReference[]
+}
+
+/** Dónde se usa cada campo — resultado de la pasada de referencias */
+export interface ReferenceResult {
+  /** Uso por data-name, en orden alfabético. Solo campos del esquema que se tocan */
+  fields: FieldUsage[]
+  /**
+   * Nombres citados en posición de operando en la PROCEDURE que no casan
+   * con ningún campo del esquema aportado: pueden vivir en un copybook
+   * ausente, ser registros de FD, índices, o nombres que el subconjunto
+   * confunde. Se listan para no fingir cobertura total (ADR-0003).
+   */
+  unknownNames: string[]
+  /** true si el fuente no traía cabecera PROCEDURE DIVISION (fragmento) */
+  fragment: boolean
+}
+
 /** Hechos de flujo extraídos de la PROCEDURE DIVISION */
 export interface FlowResult {
   /** PROGRAM-ID si aparece en el fuente */

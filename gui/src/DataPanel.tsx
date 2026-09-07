@@ -1,4 +1,4 @@
-import type { ParseResult } from 'knowflow'
+import type { ParseResult, ReferenceResult } from 'knowflow'
 import { useState } from 'react'
 import { ByteMap } from './ByteMap.js'
 import { SchemaTable } from './SchemaTable.js'
@@ -9,8 +9,22 @@ type Mode = 'map' | 'table'
  * Vista Datos: alterna entre el MAPA DE BYTES (representación estrella del
  * esquema, por defecto) y la TABLA clásica (alternativa accesible, siempre
  * disponible — regla de data-viz: el gráfico no sustituye a la tabla).
+ *
+ * `references` (where-used por campo) alimenta el panel de usos que aparece
+ * en la ficha FIJADA del Mapa de bytes: al fijar un campo se ve dónde se
+ * lee y dónde se escribe, con saltos a Flujo y al código.
  */
-export function DataPanel({ data }: { data: ParseResult }) {
+export function DataPanel({
+  data,
+  references,
+  onJumpToParagraph,
+  onOpenCode,
+}: {
+  data: ParseResult
+  references?: ReferenceResult | undefined
+  onJumpToParagraph?: ((name: string) => void) | undefined
+  onOpenCode?: ((line: number) => void) | undefined
+}) {
   const [mode, setMode] = useState<Mode>('map')
   return (
     <div className="datapanel">
@@ -30,7 +44,16 @@ export function DataPanel({ data }: { data: ParseResult }) {
           Tabla
         </button>
       </div>
-      {mode === 'map' ? <ByteMap data={data} /> : <SchemaTable data={data} />}
+      {mode === 'map' ? (
+        <ByteMap
+          data={data}
+          references={references}
+          onJumpToParagraph={onJumpToParagraph}
+          onOpenCode={onOpenCode}
+        />
+      ) : (
+        <SchemaTable data={data} />
+      )}
     </div>
   )
 }

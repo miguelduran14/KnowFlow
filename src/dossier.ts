@@ -1,4 +1,12 @@
-import type { Advisory, FlowResult, Inventory, ParseResult, SchemaField } from './types.js'
+import type {
+  Advisory,
+  FieldReference,
+  FlowResult,
+  Inventory,
+  ParseResult,
+  ReferenceResult,
+  SchemaField,
+} from './types.js'
 import type { Explanation } from './explain/explain.js'
 import { factsFidelity } from './explain/facts.js'
 import { flowToMermaid } from './mermaid.js'
@@ -14,6 +22,8 @@ export interface DossierInput {
   flow?: FlowResult | undefined
   inventory?: Inventory | undefined
   advisories?: Advisory[] | undefined
+  /** Where-used por campo — dónde se lee/escribe cada dato en la PROCEDURE */
+  references?: ReferenceResult | undefined
   explanation?: Explanation | undefined
   /** Encabezado cuando el fuente no trae PROGRAM-ID (p. ej. el nombre del fichero) */
   sourceName?: string | undefined
@@ -110,8 +120,60 @@ function walkthroughSection(explanation: Explanation, out: string[]): void {
  * inventario + avisos + límites de lo verificado. Todo son hechos del
  * parser salvo la prosa, que va etiquetada como tal.
  */
+/** Rol de una referencia como sigla corta para el dossier. */
+const REF_ROLE: Record<FieldReference['kind'], string> = {
+  read: 'R',
+  write: 'W',
+  'read-write': 'RW',
+  unclassified: '?',
+}
+
+/**
+ * Sección "dónde se usa cada campo": para cada dato del esquema tocado en
+ * la PROCEDURE, sus lecturas y escrituras ancladas a párrafo y línea. Es
+ * la misma verdad que el panel de usos de la GUI, en Markdown. Todo son
+ * hechos del parser; las ocurrencias en verbos cuyo reparto de roles no se
+ * modela van marcadas `?` (ADR-0003).
+ */
+function fieldUsageSection(references: ReferenceResult, out: string[]): void {
+  if (references.fields.length === 0) return
+  out.push('## Dónde se usa cada campo')
+  out.push('')
+  out.push(
+    '_Lecturas (`R`) y escrituras (`W`) de cada dato en la PROCEDURE DIVISION, verificadas contra el fuente. ' +
+      '`RW` = un mismo operando leído y escrito en la sentencia (`ADD 1 TO X`). ' +
+      '`?` = el verbo no permite afirmar el rol. `~` marca lo incierto (argumento por referencia de una CALL, MOVE CORRESPONDING, homónimo…)._',
+  )
+  out.push('')
+
+  const MAX_PER_FIELD = 14
+  for (const field of references.fields) {
+    // Una sola lista por campo, en orden de línea; una `read-write` aparece
+    // en `reads` y `writes` a la vez, así que se deduplica por línea+verbo.
+    const seen = new Set<string>()
+    const rows: FieldReference[] = []
+    for (const ref of [...field.writes, ...field.reads, ...field.unclassified].sort((a, b) => a.line - b.line)) {
+      const key = `${ref.line}|${ref.verb}|${ref.kind}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      rows.push(ref)
+    }
+
+    out.push(`- **${cell(field.name)}**`)
+    for (const ref of rows.slice(0, MAX_PER_FIELD)) {
+      const where = ref.paragraphImplicit ? `${ref.paragraph} (entrada implícita)` : ref.paragraph
+      const marks = [ref.via88 ? `vía ${ref.via88}` : '', ref.uncertain ? '~' : ''].filter(Boolean)
+      out.push(
+        `  - \`${REF_ROLE[ref.kind]}\` ${cell(where)} L${ref.line} — ${cell(ref.verb)}${marks.length > 0 ? ` (${marks.join(', ')})` : ''}`,
+      )
+    }
+    if (rows.length > MAX_PER_FIELD) out.push(`  - … y ${rows.length - MAX_PER_FIELD} usos más`)
+  }
+  out.push('')
+}
+
 export function renderDossier(input: DossierInput): string {
-  const { data, flow, inventory, advisories, explanation, sourceName } = input
+  const { data, flow, inventory, advisories, references, explanation, sourceName } = input
   const out: string[] = []
 
   const title = flow?.programId ?? sourceName ?? 'programa COBOL'
@@ -159,6 +221,8 @@ export function renderDossier(input: DossierInput): string {
     out.push(...rows)
     out.push('')
   }
+
+  if (references) fieldUsageSection(references, out)
 
   const inventoryHasFacts =
     inventory !== undefined &&
@@ -228,7 +292,7 @@ export function renderDossier(input: DossierInput): string {
     out.push('')
   }
 
-  const gaps = collectGaps(data, flow, inventory)
+  const gaps = collectGaps(data, flow, inventory, references)
   if (gaps.length > 0) {
     out.push('## Límites de lo verificado')
     out.push('')
@@ -244,9 +308,15 @@ function collectGaps(
   data: ParseResult | undefined,
   flow: FlowResult | undefined,
   inventory: Inventory | undefined,
+  references?: ReferenceResult | undefined,
 ): string[] {
   const gaps: string[] = []
   if (flow?.fragment) gaps.push('El fuente es un fragmento sin PROCEDURE DIVISION: fidelidad parcial.')
+  if (references && references.unknownNames.length > 0) {
+    gaps.push(
+      `Nombres usados en la PROCEDURE que no casan con el esquema aportado (¿copybook ausente?): ${references.unknownNames.join(', ')}.`,
+    )
+  }
   for (const member of data?.missingCopybooks ?? []) {
     gaps.push(`Copybook \`${member}\` no disponible: su estructura es desconocida.`)
   }
