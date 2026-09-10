@@ -17,6 +17,10 @@ que lo escribió ya no está.
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![Node](https://img.shields.io/badge/node-%E2%89%A518-informational)
 
+<br>
+
+<img src="docs/hero.png" alt="Pantalla de inicio de KnowFlow" width="860">
+
 </div>
 
 ---
