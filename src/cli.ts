@@ -47,7 +47,34 @@ async function serveFile(path: string): Promise<{ body: Buffer; type: string } |
   }
 }
 
+// Versión mínima de Node (coincide con "engines" en package.json). Este
+// aviso solo puede saltar si Node EXISTE pero es viejo — sin Node instalado
+// no hay intérprete que lo muestre; para ese caso, el README indica cómo
+// instalarlo. Aquí se convierte un fallo por sintaxis/API moderna en un
+// mensaje claro con el comando para actualizar.
+const MIN_NODE = 18
+
+function checkNodeVersion(): boolean {
+  const major = Number(process.versions.node.split('.')[0])
+  if (major >= MIN_NODE) return true
+  console.error(
+    `\nKnowFlow necesita Node ${MIN_NODE} o superior. Estás usando Node ${process.versions.node}.\n\n` +
+      'Actualiza Node (elige uno):\n' +
+      '  • Instalador LTS:  https://nodejs.org\n' +
+      '  • Windows (winget): winget install OpenJS.NodeJS.LTS\n' +
+      '  • macOS (brew):     brew install node\n' +
+      '  • Con nvm:          nvm install --lts\n\n' +
+      "Luego vuelve a ejecutar 'npx knowflow'.\n",
+  )
+  return false
+}
+
 async function main(): Promise<void> {
+  if (!checkNodeVersion()) {
+    process.exitCode = 1
+    return
+  }
+
   if (!existsSync(INDEX_HTML)) {
     console.error(
       'No se encuentra la GUI compilada (gui/dist/index.html).\n' +

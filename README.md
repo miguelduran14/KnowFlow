@@ -46,6 +46,21 @@ Todo resultado lleva su **nivel de fidelidad**: lo que el parser verificó, y lo
 como hueco (copybook ausente, `CALL` dinámica, destino no encontrado) en vez de rellenarse con una
 suposición. Es el principio de no-invención del proyecto ([ADR-0003](docs/adr/0003-niveles-de-fidelidad-y-no-invencion.md)).
 
+## Requisitos
+
+Solo **[Node.js](https://nodejs.org) 18 o superior** (incluye `npm`). Para comprobar si ya lo
+tienes: `node --version`. Si no, instálalo con el instalador LTS de nodejs.org o por línea de
+comandos:
+
+```bash
+# Windows
+winget install OpenJS.NodeJS.LTS
+# macOS
+brew install node
+# con nvm (cualquier SO)
+nvm install --lts
+```
+
 ## Empezar en 30 segundos
 
 ```bash
