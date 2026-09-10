@@ -165,6 +165,9 @@ sin interfaz con el arnés de desarrollo: `npx tsx harness/flow.ts <fichero.cbl>
 import { parse, parseFlow, parseInventory, collectReferences, traceField } from 'knowflow'
 ```
 
+Para sacar una versión nueva (subir versión, alinear GitHub y npm, publicar), ver
+[`RELEASING.md`](RELEASING.md).
+
 ## Licencia
 
 Apache-2.0. Ver [ADR-0004](docs/adr/0004-licencia-apache-2.md) para el porqué (cláusula de
