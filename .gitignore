@@ -1,3 +1,13 @@
 node_modules/
 dist/
 *.tsbuildinfo
+
+# Tooling de agentes (Claude Code / Codex): personal, no es parte del producto
+.agents/
+.claude/skills/
+skills-lock.json
+
+# Ficheros sueltos de trabajo
+/Regla
+/Sintetizado
+/resuelto

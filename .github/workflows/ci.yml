@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias del motor
+        run: npm ci
+
+      - name: Instalar dependencias de la GUI
+        run: npm ci --prefix gui
+
+      # typecheck + tests del motor + build completo (motor + GUI)
+      - name: Verificar
+        run: npm run verify

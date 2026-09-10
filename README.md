@@ -13,6 +13,10 @@ que lo escribió ya no está.
 
 `local-first` · `BYOK` · `Apache-2.0` · `sin backend`
 
+[![CI](https://github.com/miguelduran14/KnowFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/miguelduran14/KnowFlow/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+![Node](https://img.shields.io/badge/node-%E2%89%A518-informational)
+
 </div>
 
 ---
