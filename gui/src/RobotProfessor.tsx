@@ -94,15 +94,14 @@ export function RobotProfessor() {
     const fullNameWidth = logoCtx.measureText('KnowFlow').width
     const kWidth = logoCtx.measureText('K').width
     const logoStart = (logoCanvas.width - fullNameWidth) / 2
+    // Marca sola, centrada en el panel del pecho (sin subtexto: a este
+    // tamaño la coletilla quedaba ilegible y ensuciaba el estampado).
+    const logoY = logoCanvas.height / 2
     logoCtx.fillStyle = '#6ff5d8'
-    logoCtx.fillText('K', logoStart, 55)
+    logoCtx.fillText('K', logoStart, logoY)
     logoCtx.fillStyle = '#effefb'
     // Una ligera superposición elimina el hueco óptico entre la K y «now».
-    logoCtx.fillText('nowFlow', logoStart + kWidth - 3, 55)
-    logoCtx.font = '500 21px ui-monospace, monospace'
-    logoCtx.textAlign = 'center'
-    logoCtx.fillStyle = 'rgba(239,254,251,.72)'
-    logoCtx.fillText('COBOL · CONTEXTO', 256, 105)
+    logoCtx.fillText('nowFlow', logoStart + kWidth - 3, logoY)
     const logoTexture = new THREE.CanvasTexture(logoCanvas)
     logoTexture.colorSpace = THREE.SRGBColorSpace
     const logo = new THREE.Mesh(

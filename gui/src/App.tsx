@@ -564,7 +564,7 @@ function AppShell() {
       <header className="topbar">
         <div className="brand">
           <span className="brand__name">KnowFlow</span>
-          <span className="brand__tag">comprensión de COBOL, verificada por parser</span>
+          <span className="brand__tag">Comprensión de COBOL verificada por parser</span>
         </div>
         <div className="actions">
           <PrivacyBadge />

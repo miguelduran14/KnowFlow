@@ -23,4 +23,15 @@ export default defineConfig({
     },
   },
   optimizeDeps: { include: ['react', 'react-dom', 'react/jsx-runtime', 'framer-motion'] },
+  build: {
+    // El chunk grande (~1,4 MB) es elk + React Flow, la semilla del grafo.
+    // NO está en el arranque: solo lo importan FlowCanvas y ChainCanvas, que
+    // van con lazy(), así que la portada no lo descarga — solo se baja al
+    // abrir Flujo/Cadena. Se deja el troceo automático de Vite (forzar un
+    // manualChunk para React Flow hacía que Vite lo enganchara al entry y
+    // acababa cargándose en la portada, que es justo lo que no queremos).
+    // Solo se sube el umbral del aviso: ese peso es correcto por diseño y
+    // está fuera de la ruta crítica.
+    chunkSizeWarningLimit: 1700,
+  },
 })
