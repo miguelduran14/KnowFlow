@@ -1,4 +1,4 @@
-import type { ParseResult, SchemaField } from 'knowflow'
+import type { ParseResult, SchemaField } from '@miguelduran14/knowflow'
 import { Fragment } from 'react'
 
 function FieldRows({ field, depth }: { field: SchemaField; depth: number }) {

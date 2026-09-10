@@ -13,7 +13,7 @@ import {
   type NodeProps,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import type { LinkedFlow } from 'knowflow'
+import type { LinkedFlow } from '@miguelduran14/knowflow'
 import { useEffect, useMemo, useState } from 'react'
 import { layoutChain, type ChainEdge, type ChainNode } from './layout.js'
 import { useThemeTokens } from './theme.js'

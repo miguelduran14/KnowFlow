@@ -8,7 +8,7 @@ import {
   type ExplanationProvider,
   type ProgramFacts,
   type WalkthroughStep,
-} from 'knowflow'
+} from '@miguelduran14/knowflow'
 import { CheckCircle, Eye, EyeSlash, FloppyDisk, Trash } from '@phosphor-icons/react'
 import { motion, useReducedMotion, type Variants } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'

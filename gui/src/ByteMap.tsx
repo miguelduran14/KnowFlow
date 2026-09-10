@@ -1,5 +1,5 @@
-import type { FieldReference, ParseResult, ReferenceResult, SchemaField, TraceResult, TraceStep } from 'knowflow'
-import { traceField } from 'knowflow'
+import type { FieldReference, ParseResult, ReferenceResult, SchemaField, TraceResult, TraceStep } from '@miguelduran14/knowflow'
+import { traceField } from '@miguelduran14/knowflow'
 import { ArrowLineLeft, ArrowLineRight, PushPin, X } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 

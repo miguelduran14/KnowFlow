@@ -1,6 +1,6 @@
 import ELK from 'elkjs/lib/elk.bundled.js'
 import type { ElkNode } from 'elkjs/lib/elk.bundled.js'
-import type { FlowEdge, FlowResult, LinkedFlow } from 'knowflow'
+import type { FlowEdge, FlowResult, LinkedFlow } from '@miguelduran14/knowflow'
 
 /**
  * Etiqueta de arista para el LIENZO — distinta del `flowEdgeLabel` del motor

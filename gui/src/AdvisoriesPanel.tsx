@@ -1,4 +1,4 @@
-import type { Advisory } from 'knowflow'
+import type { Advisory } from '@miguelduran14/knowflow'
 import { Code } from '@phosphor-icons/react'
 
 /**

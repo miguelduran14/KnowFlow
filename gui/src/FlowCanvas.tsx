@@ -19,7 +19,7 @@ import {
   type NodeProps,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import type { ExecBlock, FileOperation, FlowEdge, FlowParagraph, FlowResult, Inventory } from 'knowflow'
+import type { ExecBlock, FileOperation, FlowEdge, FlowParagraph, FlowResult, Inventory } from '@miguelduran14/knowflow'
 import {
   ArrowSquareOut,
   Code,

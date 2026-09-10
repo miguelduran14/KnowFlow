@@ -1,4 +1,4 @@
-import { factsFidelity, type Inventory } from 'knowflow'
+import { factsFidelity, type Inventory } from '@miguelduran14/knowflow'
 
 /** Nº de línea clicable que salta al código. Si no hay callback, texto plano. */
 function LineLink({ line, onOpenCode }: { line: number; onOpenCode?: ((line: number) => void) | undefined }) {

@@ -1,12 +1,13 @@
 # Publicar una versión
 
 Cómo sacar una versión nueva de KnowFlow: subir el número, dejar GitHub y npm
-alineados, y publicar. El paquete de npm es el que hace funcionar `npx knowflow`.
+alineados, y publicar. El paquete de npm es el que hace funcionar `npx @miguelduran14/knowflow`.
 
 ## Requisitos (una vez)
 
 - Node ≥ 18 y dependencias instaladas: `npm install` y `npm install --prefix gui`.
-- Sesión de npm iniciada con permiso sobre el paquete `knowflow`: `npm login`.
+- Sesión de npm con permiso de publicación sobre `@miguelduran14/knowflow`
+  (`npm login`, o un token de automatización en `~/.npmrc`).
 
 ## Pasos
 
@@ -57,7 +58,7 @@ alineados, y publicar. El paquete de npm es el que hace funcionar `npx knowflow`
 - Qué se empaqueta, sin publicar: `npm publish --dry-run` (debe listar solo
   `dist/` + `gui/dist/` + `package.json` + `README.md` + `LICENSE`; el `src/`,
   los tests y `examples/` NO viajan — los ejemplos van embebidos en el bundle).
-- Tras publicar: `npx knowflow@latest` en una carpeta limpia debe abrir la app en
+- Tras publicar: `npx @miguelduran14/knowflow@latest` en una carpeta limpia debe abrir la app en
   `http://localhost:4173`.
 
 ## Notas

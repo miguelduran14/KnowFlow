@@ -15,7 +15,7 @@ import {
   type LinkedFlow,
   type ParseResult,
   type ReferenceResult,
-} from 'knowflow'
+} from '@miguelduran14/knowflow'
 import {
   CaretRight,
   Code,

@@ -1,4 +1,4 @@
-import { GLOSSARY_BY_ID, segmentText, type GlossaryEntry } from 'knowflow'
+import { GLOSSARY_BY_ID, segmentText, type GlossaryEntry } from '@miguelduran14/knowflow'
 import { motion, useReducedMotion } from 'framer-motion'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 

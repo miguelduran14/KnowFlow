@@ -1,8 +1,11 @@
 {
-  "name": "knowflow",
+  "name": "@miguelduran14/knowflow",
   "version": "0.1.1",
   "description": "COBOL comprehension and onboarding tool — parse deterministically, explain with AI",
   "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
   "author": "Miguel Durán (https://github.com/miguelduran14)",
   "homepage": "https://github.com/miguelduran14/KnowFlow#readme",
   "repository": {

@@ -1,4 +1,4 @@
-import type { ParseResult, ReferenceResult } from 'knowflow'
+import type { ParseResult, ReferenceResult } from '@miguelduran14/knowflow'
 import { useState } from 'react'
 import { ByteMap } from './ByteMap.js'
 import { SchemaTable } from './SchemaTable.js'

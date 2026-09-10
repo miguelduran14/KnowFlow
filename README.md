@@ -63,6 +63,14 @@ nvm install --lts
 
 ## Empezar en 30 segundos
 
+Sin instalar nada, con un solo comando:
+
+```bash
+npx @miguelduran14/knowflow
+```
+
+O desde el código, si quieres trastear:
+
 ```bash
 git clone https://github.com/miguelduran14/KnowFlow.git
 cd KnowFlow
@@ -162,7 +170,7 @@ El motor (`src/`) es una librería TypeScript independiente de la GUI (`gui/`) y
 sin interfaz con el arnés de desarrollo: `npx tsx harness/flow.ts <fichero.cbl>`.
 
 ```ts
-import { parse, parseFlow, parseInventory, collectReferences, traceField } from 'knowflow'
+import { parse, parseFlow, parseInventory, collectReferences, traceField } from '@miguelduran14/knowflow'
 ```
 
 Para sacar una versión nueva (subir versión, alinear GitHub y npm, publicar), ver

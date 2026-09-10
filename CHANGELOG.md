@@ -41,7 +41,7 @@ determinista, la interfaz de análisis y la cadena de ejemplo.
   `IF` / `EVALUATE`), inventario (ficheros y su E/S, `EXEC SQL` con tablas y cursores,
   `EXEC CICS`), resolución de `COPY` / `EXEC SQL INCLUDE` y enlace de la cadena entre
   programas (`CALL` que cruza la frontera de un programa).
-- **Interfaz local** (`npx knowflow`): vistas de Flujo (lienzo interactivo con
+- **Interfaz local** (`npx @miguelduran14/knowflow`): vistas de Flujo (lienzo interactivo con
   React Flow + elk, ficha de párrafo, filtro de aristas, plegado de secciones,
   export a Mermaid / SVG / PNG), Datos (mapa de bytes proporcional + tabla), Qué
   toca, Avisos, Cadena y Explicación. Persistencia local de la sesión.
