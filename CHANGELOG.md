@@ -6,6 +6,27 @@ Todos los cambios relevantes de KnowFlow. El formato sigue
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-10
+
+Pulido de presentación y arranque. Sin cambios en el motor de análisis.
+
+### Added
+
+- **Portada rediseñada** en dos columnas con un robot 3D (Three.js empaquetado,
+  sin CDN; respeta local-first). Se carga diferido tras el primer pintado, en su
+  propio chunk, para no penalizar el arranque.
+- **Integración continua** (GitHub Actions): `npm run verify` en cada push.
+- **Imagen de portada** en el README y ficha del paquete lista para npm
+  (`prepublishOnly`, metadatos, keywords).
+- Aviso claro al arrancar si la versión de Node es < 18, con el comando para
+  actualizar.
+
+### Changed
+
+- El subtítulo de la barra pasa a «Comprensión de COBOL verificada por parser».
+- Se retira del control de versiones el tooling de agentes (`.agents/`,
+  `.claude/skills/`): configuración personal, no parte del producto.
+
 ## [0.1.0] - 2026-09-07
 
 Primer hito **listo para demo**. Reúne todo el trabajo hasta la fecha: el motor
@@ -63,5 +84,6 @@ determinista, la interfaz de análisis y la cadena de ejemplo.
   modificación de referencia) se cuentan como lectura de índice, no como el rol del
   operando; los nombres de `INDEXED BY` ya no se listan como desconocidos.
 
-[Unreleased]: https://github.com/miguelduran14/KnowFlow/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/miguelduran14/KnowFlow/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/miguelduran14/KnowFlow/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/miguelduran14/KnowFlow/releases/tag/v0.1.0

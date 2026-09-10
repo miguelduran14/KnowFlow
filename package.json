@@ -1,6 +1,6 @@
 {
   "name": "knowflow",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "COBOL comprehension and onboarding tool — parse deterministically, explain with AI",
   "license": "Apache-2.0",
   "author": "Miguel Durán (https://github.com/miguelduran14)",
