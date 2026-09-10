@@ -3,6 +3,27 @@
   "version": "0.1.0",
   "description": "COBOL comprehension and onboarding tool — parse deterministically, explain with AI",
   "license": "Apache-2.0",
+  "author": "Miguel Durán (https://github.com/miguelduran14)",
+  "homepage": "https://github.com/miguelduran14/KnowFlow#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miguelduran14/KnowFlow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/miguelduran14/KnowFlow/issues"
+  },
+  "keywords": [
+    "cobol",
+    "mainframe",
+    "legacy-code",
+    "static-analysis",
+    "code-comprehension",
+    "parser",
+    "copybook",
+    "db2",
+    "cics",
+    "developer-tools"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -26,7 +47,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run typecheck && npm test && npm run build"
+    "verify": "npm run typecheck && npm test && npm run build",
+    "prepublishOnly": "npm run verify"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
