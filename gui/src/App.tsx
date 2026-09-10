@@ -45,8 +45,26 @@ import { PrivacyBadge } from './PrivacyBadge.js'
 // se ve un grafo. El resto de la app funciona sin ellos.
 const FlowCanvas = lazy(() => import('./FlowCanvas.js').then(m => ({ default: m.FlowCanvas })))
 const ChainCanvas = lazy(() => import('./ChainCanvas.js').then(m => ({ default: m.ChainCanvas })))
+const RobotProfessor = lazy(() => import('./RobotProfessor.js').then(m => ({ default: m.RobotProfessor })))
 
 const MAIN_SOURCE = 'programa pegado'
+
+/** Deja que el shell y la zona de carga se pinten antes de pedir el renderer
+ * 3D. El fondo reservado evita saltos de layout mientras llega el personaje. */
+function LandingRobot() {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setReady(true), 0)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  if (!ready) return <div className="robot-professor robot-professor--loading" aria-hidden="true" />
+  return (
+    <Suspense fallback={<div className="robot-professor robot-professor--loading" aria-hidden="true" />}>
+      <RobotProfessor />
+    </Suspense>
+  )
+}
 
 type View = 'explain' | 'flow' | 'data' | 'inventory' | 'advisories' | 'chain'
 
@@ -122,6 +140,7 @@ function Landing({
   onLoadExample: () => void
 }) {
   const reduce = useReducedMotion()
+  const [featuresOpen, setFeaturesOpen] = useState(false)
   const rise = (i: number) =>
     reduce
       ? {}
@@ -133,42 +152,62 @@ function Landing({
 
   return (
     <div className="landing">
-      <motion.div className={`dropzone${over ? ' dropzone--over' : ''}`} {...rise(0)}>
-        <div className="dropzone__icon">
-          <UploadSimple size={30} weight="regular" />
-        </div>
-        <h1 className="landing__title">
-          Entiende un programa COBOL <span className="accent">sin leer el código</span>
-        </h1>
-        <p className="landing__sub">
-          Arrastra aquí tu programa <code>.cbl</code> y sus copybooks <code>.cpy</code>. KnowFlow lo
-          analiza y te devuelve el flujo, los datos, qué toca y una explicación en lenguaje llano —
-          todo verificado por el parser, nada lo inventa un modelo.
-        </p>
-        <div className="landing__cta">
-          <button className="btn btn--primary" onClick={onLoadExample}>
-            <Sparkle size={16} weight="fill" /> Cargar programa de ejemplo
-          </button>
-          <span className="landing__or">o arrastra un fichero</span>
-        </div>
-      </motion.div>
-
-      <motion.div className="preview-cards" {...rise(1)}>
-        {VIEWS.filter(v => v.id !== 'chain').map((v, i) => (
-          <motion.div key={v.id} className="preview-card" {...rise(2 + i)}>
-            <v.Icon size={20} weight="duotone" />
-            <div>
-              <b>{v.label}</b>
-              <span>{v.hint}</span>
+      <div className="landing__hero">
+        <motion.div className="landing__copy" {...rise(0)}>
+          <div className="landing__eyebrow">Nuevo análisis</div>
+          <h1 className="landing__title">
+            Entiende tu programa <span className="accent">COBOL</span> con contexto.
+          </h1>
+          <p className="landing__sub">
+            Carga el programa y sus copybooks para empezar a reconstruirlo con seguridad.
+          </p>
+          <div className={`dropzone${over ? ' dropzone--over' : ''}`}>
+            <div className="dropzone__icon">
+              <UploadSimple size={26} weight="regular" />
             </div>
-          </motion.div>
-        ))}
-      </motion.div>
+            <div>
+              <b>Arrastra un programa y sus copybooks</b>
+              <span><code>.cbl</code> · <code>.cpy</code></span>
+            </div>
+          </div>
+          <div className="landing__cta">
+            <button className="btn btn--primary" onClick={onLoadExample}>
+              <Sparkle size={16} weight="fill" /> Cargar programa de ejemplo
+            </button>
+            <button
+              className="landing__features-button"
+              type="button"
+              onClick={() => setFeaturesOpen(open => !open)}
+              aria-expanded={featuresOpen}
+              aria-controls="landing-features"
+            >
+              Funcionalidades
+            </button>
+          </div>
+        </motion.div>
+        <motion.div className="landing__robot" {...rise(1)}>
+          <LandingRobot />
+        </motion.div>
+      </div>
 
-      <motion.p className="landing__ip" {...rise(6)}>
-        Local-first: tu código solo sale de tu máquina hacia el proveedor de IA que tú configures.
-        Usa solo COBOL sintético o público — nunca código de clientes.
-      </motion.p>
+      <AnimatePresence initial={false}>
+        {featuresOpen && (
+          <motion.div
+            id="landing-features"
+            className="landing-features"
+            animate={{ opacity: 1, y: 0 }}
+            {...(reduce ? {} : { initial: { opacity: 0, y: -8 }, exit: { opacity: 0, y: -8 } })}
+            transition={{ duration: 0.18 }}
+          >
+            {VIEWS.filter(v => !['chain', 'advisories'].includes(v.id)).map(v => (
+              <div key={v.id} className="preview-card">
+                <v.Icon size={19} weight="duotone" />
+                <div><b>{v.label}</b><span>{v.hint}</span></div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -530,11 +569,7 @@ function AppShell() {
         <div className="actions">
           <PrivacyBadge />
           <ThemeToggle />
-          {!hasSource ? (
-            <button className="btn" onClick={loadExample}>
-              Cargar ejemplo
-            </button>
-          ) : (
+          {hasSource && (
             <>
               <button className="btn btn--primary" onClick={exportDossier} disabled={!hasSource}>
                 <FileArrowDown size={15} weight="bold" /> Exportar dossier
